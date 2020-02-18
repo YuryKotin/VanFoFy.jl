@@ -1,0 +1,13 @@
+name = "VanFoFy"
+uuid = "d3879196-7e9c-455f-b02c-05e69aab41fb"
+authors = ["YuryKotin <kotin-acc@yandex.ru>"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
