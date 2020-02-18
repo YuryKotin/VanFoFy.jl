@@ -3,6 +3,9 @@ uuid = "d3879196-7e9c-455f-b02c-05e69aab41fb"
 authors = ["YuryKotin <kotin-acc@yandex.ru>"]
 version = "0.1.0"
 
+[deps]
+OffsetArrays = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
+
 [compat]
 julia = "1"
 

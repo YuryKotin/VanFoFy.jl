@@ -1,6 +1,17 @@
-using VanFoFy
-using Test
+include("common.jl")
 
-@testset "VanFoFy.jl" begin
-    # Write your own tests here.
+macro include_testset(filename)
+    @assert filename isa AbstractString
+    quote
+        @testset $(filename) begin
+            include($(filename))
+        end
+    end
 end
+
+####
+#### unit tests
+####
+
+@include_testset("test-theta.jl")
+@include_testset("test-weierstrass.jl")
