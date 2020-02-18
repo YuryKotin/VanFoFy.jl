@@ -1,10 +1,8 @@
 module VanFoFy
 
 using OffsetArrays
-#using DocStringExtensions: FIELDS, FUNCTIONNAME, SIGNATURES, TYPEDEF
 #using Markdown
 
-export theta
 
 include("typesynonims.jl")
 
@@ -22,6 +20,6 @@ function construct_problem(cell::CellData)
     #lext   = construct_lext(cell, plane)
 end
 
-
+export theta
 
 end # module
