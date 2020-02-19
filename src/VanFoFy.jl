@@ -10,6 +10,8 @@ include("input.jl")
 
 include("ellipticals.jl")
 
+include("simbolic.jl")
+
 include("lshear-main.jl")
 
 function construct_problem(cell::CellData)

@@ -1,6 +1,6 @@
 ω1 = complex(1.0)
 ω3 = exp(1im)
-wei = Weierstrass(ω1=ω1, ω3=ω3)
+wei = WeierstrassData(ω1=ω1, ω3=ω3)
 
 
 @testset "Weierstrass construction" begin
