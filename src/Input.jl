@@ -1,3 +1,7 @@
+module Input
+
+using ..TypeSynonyms: RationalComplex
+
 struct FiberData
     E        :: Vector{Float64}
     μ        :: Vector{Float64}
@@ -21,3 +25,5 @@ struct CellData
     fibers   :: Vector{FiberData}
     cohesive :: CohesiveData
 end
+
+end # module Input

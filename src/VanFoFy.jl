@@ -1,18 +1,9 @@
 module VanFoFy
 
-using OffsetArrays
-#using Markdown
+include("all_modules.jl")
 
-
-include("typesynonims.jl")
-
-include("input.jl")
-
-include("ellipticals.jl")
-
-include("simbolic.jl")
-
-include("lshear-main.jl")
+using .Input: CellData
+using .Ellipticals: Weierstrass, theta
 
 function construct_problem(cell::CellData)
     wei = Weierstrass(cell)

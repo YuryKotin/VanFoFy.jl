@@ -1,3 +1,12 @@
+module LShearCohesive
+
+using OffsetArrays
+
+using ..TypeSynonyms: RationalComplex
+using ..TypeSynonyms: IntOffsetVector, ComplexOffsetVector
+using ..TypeSynonyms: RComplex2OffsetMatrix, RComplex2IntDict
+using ..Ellipticals: Weierstrass, term_expansion_normalized!
+
 struct Pole
     taylor_rows::UnitRange{Int64}
     laurent_rows::IntOffsetVector
@@ -66,7 +75,7 @@ function fill_slae_coupling_taylor!(slae::Array{Float64, 2},
                                     rows::UnitRange{Int64},
                                     term::EllipticTerm,
                                     delta::RationalComplex,
-                                    series_dict::RComplexToOffsetMatrix,
+                                    series_dict::RComplex2OffsetMatrix,
                                     r_source::Float64,
                                     r_dest::Float64,
                                     temp_vector::ComplexOffsetVector)
@@ -131,7 +140,7 @@ end
 
 function fill_slae_coupling!(slae::Array{Float64, 2},
                              elliptic::GeneralElliptic,
-                             series_dict::RComplexToOffsetMatrix)
+                             series_dict::RComplex2OffsetMatrix)
 
     max_n_terms = 0
     for el in elliptic.sp_terms
@@ -164,23 +173,19 @@ function fill_slae_coupling!(slae::Array{Float64, 2},
     end
 end
 
-function push_to_wei_deltas!(dict::WeiDeltas, key::RationalComplex,
-                              new_value::Tuple{Int64, Bool})
-    if real(key) < 0
-        key = -key
+function push_to_wei_deltas!(deltas_dict::RComplex2IntDict, delta::RationalComplex,
+                              new_value::Int64)
+    if real(delta) < 0
+        delta = -delta
     end
 
-    old_value = get(dict, key, (0,false))
-    if old_value[1] > 0
-        new_upper = max(old_value[1], new_value[1])
-        new_sigma = old_value[2] || new_value[2]
-        if (new_upper != old_value[1]) || (new_sigma != old_value[2])
-            dict[key] = (new_upper, new_sigma)
-        end
-    else
-        dict[key] = new_value
+    old_value = get(deltas_dict, delta, 0)
+    if new_value > old_value
+        deltas_dict[delta] = new_value
     end
 end
+
+end # module LShearCohesive
 
 #####################################################################
 ##  TESTING SECTION

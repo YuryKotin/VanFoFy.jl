@@ -1,3 +1,11 @@
+module Ellipticals
+
+using OffsetArrays
+
+using ..TypeSynonyms: ComplexOffsetMatrix, ComplexOffsetVector, RComplex2IntDict
+using ..TypeSynonyms: RationalComplex, RComplex2OffsetMatrix
+using ..Input: FiberData, CellData
+
 #####
 ##### Theta functions
 #####
@@ -404,7 +412,7 @@ function expand_at_pole!(;
 end
 
 function construct_dict_of_wei_series(;
-        delta_to_nterms ::WeiDeltas,
+        delta_to_nterms ::RComplex2IntDict,
         wei             ::WeierstrassData
         )
     #####
@@ -455,7 +463,7 @@ end
 
 function term_expansion_normalized!(;
         output         ::ComplexOffsetVector,
-        dict_of_series ::RComplexToOffsetMatrix,
+        dict_of_series ::RComplex2OffsetMatrix,
         delta          ::RationalComplex,
         n_derivative   ::Int64,
         upper_term     ::Int64,
@@ -492,7 +500,7 @@ function term_expansion_normalized!(;
 end
 
 function construct_wei_deltas(fibers::Vector{FiberData})
-    delta_to_nterms = WeiDeltas()
+    delta_to_nterms = RComplex2IntDict()
     delta_to_nterms[0] = 0
 
     n_fibers = length(fibers)
@@ -525,7 +533,7 @@ end
 
 struct Weierstrass
     data :: WeierstrassData
-    expansions :: RComplexToOffsetMatrix
+    expansions :: RComplex2OffsetMatrix
 end
 
 function Weierstrass(cell::CellData)
@@ -542,9 +550,11 @@ end
 
 struct Q_special
     wei :: Weierstrass
-    expansions :: RComplexToOffsetMatrix
+    expansions :: RComplex2OffsetMatrix
 end
 
 function Q_special(wei::Weierstrass)
 
 end
+
+end # module Ellipticals
