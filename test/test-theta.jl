@@ -1,3 +1,5 @@
+using VanFoFy.Ellipticals: Theta, theta
+
 @testset "θ-functions" begin
     ω1 = complex(1.0)
     ω3 = exp(1im)
