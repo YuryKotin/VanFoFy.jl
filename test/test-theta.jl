@@ -1,9 +1,9 @@
 @testset "θ-functions" begin
     ω1 = complex(1.0)
     ω3 = exp(1im)
-    q = nome(ω1=ω1, ω3=ω3)
     tol_check = 1e-15
     tol_compute = 1e-20
+    θ = Theta(ω1, ω3, tol_compute)
 
 
     z = 0.63256929128615824176 + 0.47122375149242207160im
@@ -12,7 +12,7 @@
 
     for n in 0:4
         for k in 1:4
-            th[k, n] = theta(th_k=k, d_n=n, z=z, q=q, ϵ=tol_compute)
+            th[k, n] = theta(θ, th_k=k, d_n=n, z=z)
         end
     end
 
@@ -63,11 +63,10 @@
 
     #####
 
-    nome_powers = precompute_nome_powers(q=q, ϵ=tol_compute, z0=ω3)
-    th1, th2, dth1, dth2 = theta_1d2d(z=z, nome_powers=nome_powers)
+    th1, th2, dth1, dth2 = theta(θ, z)
 
-    @test th1  ≈ theta(th_k=1, d_n=0, z=z, q=q, ϵ=tol_compute) atol=tol_check
-    @test th2  ≈ theta(th_k=2, d_n=0, z=z, q=q, ϵ=tol_compute) atol=tol_check
-    @test dth1 ≈ theta(th_k=1, d_n=1, z=z, q=q, ϵ=tol_compute) atol=tol_check
-    @test dth2 ≈ theta(th_k=2, d_n=1, z=z, q=q, ϵ=tol_compute) atol=tol_check
+    @test th1  ≈ theta(θ, th_k=1, d_n=0, z=z) atol=tol_check
+    @test th2  ≈ theta(θ, th_k=2, d_n=0, z=z) atol=tol_check
+    @test dth1 ≈ theta(θ, th_k=1, d_n=1, z=z) atol=tol_check
+    @test dth2 ≈ theta(θ, th_k=2, d_n=1, z=z) atol=tol_check
 end

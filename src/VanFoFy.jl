@@ -3,7 +3,7 @@ module VanFoFy
 include("all_modules.jl")
 
 using .Input: CellData
-using .Ellipticals: Weierstrass, theta
+using .Ellipticals: Weierstrass, Theta, theta
 
 function construct_problem(cell::CellData)
     wei = Weierstrass(cell)
@@ -13,6 +13,6 @@ function construct_problem(cell::CellData)
     #lext   = construct_lext(cell, plane)
 end
 
-export theta
+export Theta, theta
 
 end # module

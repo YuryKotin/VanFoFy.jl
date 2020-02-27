@@ -10,12 +10,30 @@ using ..Input: FiberData, CellData
 ##### Theta functions
 #####
 
+
+struct Theta
+    nome        ::ComplexF64
+    nome_powers ::Array{ComplexF64, 2}
+    powers_num  ::Int64
+    ϵ           ::Float64
+end
+
+function Theta(ω1::ComplexF64,
+               ω3::ComplexF64,
+               ϵ ::Float64)
+    q = nome(ω1, ω3)
+    nome_powers = precompute_nome_powers(q, ϵ, ω1+ω3)
+    powers_num = size(nome_powers, 2)
+
+    Theta(q, nome_powers, powers_num, ϵ)
+end
+
 @doc """
-  nome(; ω1::ComplexF64, ω3::ComplexF64)
+  nome(ω1::ComplexF64, ω3::ComplexF64)
 
 Return the nome for the giving pair of lattice generators.
 """
-function nome(;
+function nome(
         ω1::ComplexF64,
         ω3::ComplexF64
         )
@@ -26,22 +44,24 @@ end
 
 
 @doc """"
-  theta(; th_k::Integer, d_n::Integer,z::ComplexF64, q::ComplexF64, ϵ::Float64)
+  theta(θ::Theta; th_k::Integer, d_n::Integer,z::ComplexF64)
 
 Compute ``\\frac{d^n}{dz^n} \\theta_k(z, q)`` with tolerance `ϵ`.
 """
-function theta(;
+function theta(
+        # Theta data struct
+        th ::Theta;
         # theta-function number
         th_k ::Integer,
         # derivative number
         d_n  ::Integer,
         # point for computation
         z    ::ComplexF64,
-        # nome
-        q    ::ComplexF64,
-        # tolerance
-        ϵ    ::Float64)
+        )
    #####
+    q = th.nome
+    ϵ = th.ϵ
+
    if (th_k < 1) || (th_k > 4)
        error("Invalid theta function number")
    end
@@ -122,7 +142,7 @@ Create array of precomputed nome powers for evaluating theta functions with give
 # RETURN:
 - OffsetArray{ComplexF64}(undef, 1:2, 0:n)
 """
-function precompute_nome_powers(;
+function precompute_nome_powers(
         # nome
         q           ::ComplexF64,
         # tolerance
@@ -147,23 +167,23 @@ function precompute_nome_powers(;
             error("Series don't converge")
         end
     end
-    nome_powers = OffsetArray{ComplexF64}(undef, 1:2, 0:n)
+    nome_powers = Array{ComplexF64, 2}(undef, 2, n+1)
     for k in 0 : n
-        nome_powers[1, k] = q^((k+0.5)^2)
-        nome_powers[2, k] = nome_powers[1, k] * (2k+1)
+        nome_powers[1, k+1] = q^((k+0.5)^2)
+        nome_powers[2, k+1] = nome_powers[1, k+1] * (2k+1)
     end
+
     return nome_powers
 end
 
 @doc """
-  theta_1d2d(; z::ComplexF64, nome_powers ::ComplexOffsetMatrix)
+  theta(th::Theta, z::ComplexF64)
 
 Compute θ_1(z), θ_2(z), θ_1'(z), θ_2'(z) with given precomputed array of nome powers.
 """
-function theta_1d2d(;
-        z           ::ComplexF64,
-        # precomputed array of nome powers
-        nome_powers ::ComplexOffsetMatrix
+function theta(
+        th ::Theta,
+        z  ::ComplexF64
         )
     #####
     t1  :: ComplexF64 = 0
@@ -172,19 +192,19 @@ function theta_1d2d(;
     dt2 :: ComplexF64 = 0
     sign = 1.0
 
-    N = lastindex(nome_powers, 2)
+    N = th.powers_num-1
     for n in 0 : N
         z_n = (2n+1)*z
         sin_z = sin(z_n)
         cos_z = cos(z_n)
         # theta_1(z,q) = 2 sum_{n=0}^N (-1)^n q^{(n+0.5)^2} sin((2n+1)z)
-        t1 += 2 * sign * nome_powers[1, n] * sin_z
+        t1 += 2 * sign * th.nome_powers[1, n+1] * sin_z
         # theta_2(z,q) = 2 sum_{n=0}^N q^{(n+0.5)^2} cos((2n+1)z)
-        t2 += 2 * nome_powers[1, n] * cos_z
+        t2 += 2 * th.nome_powers[1, n+1] * cos_z
         # theta_1'(z,q) = 2 sum_{n=0}^N (-1)^n (2n+1) q^{(n+0.5)^2} cos((2n+1)z))
-        dt1 += 2 * sign * nome_powers[2, n] * cos_z
+        dt1 += 2 * sign * th.nome_powers[2, n+1] * cos_z
         # theta_2'(z,q) = -2 sum_{n=0}^N (2n+1) q^{(n+0.5)^2} sin((2n+1)z)
-        dt2 += -2 * nome_powers[2, n] * sin_z
+        dt2 += -2 * th.nome_powers[2, n+1] * sin_z
 
         sign = -sign
     end
@@ -211,8 +231,8 @@ struct WeierstrassData
     # coefficient in ℘-function evaluation
     ℘_factor      ::  ComplexF64
     σ_factor      ::  ComplexF64
-    # precomputed array of nome powers
-    nome_powers   ::  OffsetArray{Complex{Float64},2,Array{Complex{Float64},2}}
+    # θ-function data
+    θ             ::  Theta
 end
 
 @doc """
@@ -225,13 +245,11 @@ function WeierstrassData(;
         ω3::ComplexF64
         )
     #####
-    q = nome(ω1=ω1, ω3=ω3)
     tolerance = eps(imag(ω3))
-    z_theta = complex(0.0, imag(ω3))
-    nome_powers = precompute_nome_powers(q=q, ϵ=tolerance, z0=z_theta)
+    θ = Theta(ω1, ω3, tolerance)
 
-    th2 = theta(th_k=2, d_n=0, z=0.0im, q=q, ϵ=tolerance)
-    th4 = theta(th_k=4, d_n=0, z=0.0im, q=q, ϵ=tolerance)
+    th2 = theta(θ, th_k=2, d_n=0, z=0.0im)
+    th4 = theta(θ, th_k=4, d_n=0, z=0.0im)
     th24 = th2^4
     th44 = th4^4
     e_factor = π^2 / (12 * ω1^2)
@@ -242,18 +260,18 @@ function WeierstrassData(;
     g2 = -4 * (e2*e3 + e3*e1 + e1*e2)
     g3 = 4 * e1 * e2 * e3
 
-    d3th1 = theta(th_k=1, d_n=3, z=0.0im, q=q, ϵ=tolerance)
-    d1th1 = theta(th_k=1, d_n=1, z=0.0im, q=q, ϵ=tolerance)
+    d3th1 = theta(θ, th_k=1, d_n=3, z=0.0im)
+    d1th1 = theta(θ, th_k=1, d_n=1, z=0.0im)
 
     η1 = -π^2 / (12ω1) * d3th1 / d1th1
     η3 = (η1 * ω3 - 1im*π/2) / ω1
 
-    th3 = theta(th_k=3, d_n=0, z=0.0im, q=q, ϵ=tolerance)
+    th3 = theta(θ, th_k=3, d_n=0, z=0.0im)
     ℘_factor = (π * th3 * th4 / (2ω1))^2
 
     σ_factor = 2ω1 / (π*d1th1)
 
-    return WeierstrassData(ω1, ω3, e1, g2, g3, η1, ℘_factor, σ_factor, nome_powers)
+    return WeierstrassData(ω1, ω3, e1, g2, g3, η1, ℘_factor, σ_factor, θ)
 end
 
 @doc """
@@ -283,7 +301,7 @@ function weierstrass_normalized!(;
     σ_factor = w.σ_factor
 
     u = (π / (2ω1)) * z
-    th1, th2, dth1, dth2 = theta_1d2d(z=u, nome_powers=w.nome_powers)
+    th1, th2, dth1, dth2 = theta(w.θ, u)
     th1_norm = th1 / norm_factor
 
     ζ = (π/(2ω1)) * (dth1/th1_norm)
