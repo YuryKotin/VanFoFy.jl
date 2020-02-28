@@ -35,6 +35,85 @@ function nome(
 end
 
 
+"""
+  precompute_nome_powers(; q::ComplexF64, ϵ::Float64, z0::ComplexF64, max_n_terms ::Integer = 10)
+
+Create array of precomputed nome powers for evaluating theta functions with given tolerance.
+
+# RETURN:
+- Array{ComplexF64, 2}(2, n)
+"""
+function precompute_nome_powers(
+        # nome
+        q           ::ComplexF64,
+        # tolerance
+        ϵ           ::Float64,
+        # point for tolerance checking
+        z0          ::ComplexF64,
+        # maximum number of terms
+        max_n_terms ::Integer = 10
+        )
+    #####
+    n = 0
+    while true
+        # theta_1(z,q) = 2 sum_{n=0}^infty (-1)^n q^{(n+0.5)^2} sin((2n+1)z)
+        dt1 = 2*(2n+1)*cos((2n+1)*z0)*q^((n+0.5)^2)
+        # theta_2(z,q) = 2 sum_{n=0}^infty q^{(n+0.5)^2} cos((2n+1)z)
+        dt2 = 2*(2n+1)*sin((2n+1)*z0)*q^((n+0.5)^2)
+        if (abs(dt1) < ϵ) && (abs(dt1) < ϵ)
+            break
+        end
+        n += 1
+        if n > max_n_terms
+            error("Series don't converge")
+        end
+    end
+    nome_powers = Array{ComplexF64, 2}(undef, 2, n+1)
+    for k in 0 : n
+        nome_powers[1, k+1] = q^((k+0.5)^2)
+        nome_powers[2, k+1] = nome_powers[1, k+1] * (2k+1)
+    end
+
+    return nome_powers
+end
+
+@doc """
+  theta(th::Theta, z::ComplexF64)
+
+Compute θ_1(z), θ_2(z), θ_1'(z), θ_2'(z) with given precomputed array of nome powers.
+"""
+function theta(
+        th ::Theta,
+        z  ::ComplexF64
+        )
+    #####
+    t1  :: ComplexF64 = 0
+    t2  :: ComplexF64 = 0
+    dt1 :: ComplexF64 = 0
+    dt2 :: ComplexF64 = 0
+    sign = 1.0
+
+    N = th.powers_num-1
+    for n in 0 : N
+        z_n = (2n+1)*z
+        sin_z = sin(z_n)
+        cos_z = cos(z_n)
+        # theta_1(z,q) = 2 sum_{n=0}^N (-1)^n q^{(n+0.5)^2} sin((2n+1)z)
+        t1 += 2 * sign * th.nome_powers[1, n+1] * sin_z
+        # theta_2(z,q) = 2 sum_{n=0}^N q^{(n+0.5)^2} cos((2n+1)z)
+        t2 += 2 * th.nome_powers[1, n+1] * cos_z
+        # theta_1'(z,q) = 2 sum_{n=0}^N (-1)^n (2n+1) q^{(n+0.5)^2} cos((2n+1)z))
+        dt1 += 2 * sign * th.nome_powers[2, n+1] * cos_z
+        # theta_2'(z,q) = -2 sum_{n=0}^N (2n+1) q^{(n+0.5)^2} sin((2n+1)z)
+        dt2 += -2 * th.nome_powers[2, n+1] * sin_z
+
+        sign = -sign
+    end
+
+    return t1, t2, dt1, dt2
+end
+
+
 """"
   theta(θ::Theta; th_k::Integer, d_n::Integer,z::ComplexF64)
 
@@ -124,82 +203,4 @@ function theta(
    end
 
    return res
-end
-
-"""
-  precompute_nome_powers(; q::ComplexF64, ϵ::Float64, z0::ComplexF64, max_n_terms ::Integer = 10)
-
-Create array of precomputed nome powers for evaluating theta functions with given tolerance.
-
-# RETURN:
-- Array{ComplexF64, 2}(2, n)
-"""
-function precompute_nome_powers(
-        # nome
-        q           ::ComplexF64,
-        # tolerance
-        ϵ           ::Float64,
-        # point for tolerance checking
-        z0          ::ComplexF64,
-        # maximum number of terms
-        max_n_terms ::Integer = 10
-        )
-    #####
-    n = 0
-    while true
-        # theta_1(z,q) = 2 sum_{n=0}^infty (-1)^n q^{(n+0.5)^2} sin((2n+1)z)
-        dt1 = 2*(2n+1)*cos((2n+1)*z0)*q^((n+0.5)^2)
-        # theta_2(z,q) = 2 sum_{n=0}^infty q^{(n+0.5)^2} cos((2n+1)z)
-        dt2 = 2*(2n+1)*sin((2n+1)*z0)*q^((n+0.5)^2)
-        if (abs(dt1) < ϵ) && (abs(dt1) < ϵ)
-            break
-        end
-        n += 1
-        if n > max_n_terms
-            error("Series don't converge")
-        end
-    end
-    nome_powers = Array{ComplexF64, 2}(undef, 2, n+1)
-    for k in 0 : n
-        nome_powers[1, k+1] = q^((k+0.5)^2)
-        nome_powers[2, k+1] = nome_powers[1, k+1] * (2k+1)
-    end
-
-    return nome_powers
-end
-
-@doc """
-  theta(th::Theta, z::ComplexF64)
-
-Compute θ_1(z), θ_2(z), θ_1'(z), θ_2'(z) with given precomputed array of nome powers.
-"""
-function theta(
-        th ::Theta,
-        z  ::ComplexF64
-        )
-    #####
-    t1  :: ComplexF64 = 0
-    t2  :: ComplexF64 = 0
-    dt1 :: ComplexF64 = 0
-    dt2 :: ComplexF64 = 0
-    sign = 1.0
-
-    N = th.powers_num-1
-    for n in 0 : N
-        z_n = (2n+1)*z
-        sin_z = sin(z_n)
-        cos_z = cos(z_n)
-        # theta_1(z,q) = 2 sum_{n=0}^N (-1)^n q^{(n+0.5)^2} sin((2n+1)z)
-        t1 += 2 * sign * th.nome_powers[1, n+1] * sin_z
-        # theta_2(z,q) = 2 sum_{n=0}^N q^{(n+0.5)^2} cos((2n+1)z)
-        t2 += 2 * th.nome_powers[1, n+1] * cos_z
-        # theta_1'(z,q) = 2 sum_{n=0}^N (-1)^n (2n+1) q^{(n+0.5)^2} cos((2n+1)z))
-        dt1 += 2 * sign * th.nome_powers[2, n+1] * cos_z
-        # theta_2'(z,q) = -2 sum_{n=0}^N (2n+1) q^{(n+0.5)^2} sin((2n+1)z)
-        dt2 += -2 * th.nome_powers[2, n+1] * sin_z
-
-        sign = -sign
-    end
-
-    return t1, t2, dt1, dt2
 end

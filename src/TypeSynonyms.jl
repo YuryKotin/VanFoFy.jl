@@ -17,4 +17,11 @@ const RComplex2IntDict = Dict{RationalComplex, Int64}
 
 const RComplex2OffsetMatrix = Dict{RationalComplex,ComplexOffsetMatrix}
 
+export ComplexOffsetMatrix
+export ComplexOffsetVector
+export IntOffsetVector
+export RationalComplex
+export RComplex2IntDict
+export RComplex2OffsetMatrix
+
 end # module TypeSynonims

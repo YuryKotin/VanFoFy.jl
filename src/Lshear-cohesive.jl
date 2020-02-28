@@ -2,9 +2,7 @@ module LShearCohesive
 
 using OffsetArrays
 
-using ..TypeSynonyms: RationalComplex
-using ..TypeSynonyms: IntOffsetVector, ComplexOffsetVector
-using ..TypeSynonyms: RComplex2OffsetMatrix, RComplex2IntDict
+using ..TypeSynonyms
 using ..Ellipticals: Weierstrass, term_expansion_normalized!
 
 struct Pole
