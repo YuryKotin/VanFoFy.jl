@@ -1,9 +1,43 @@
-module LShearCohesive
-
 using OffsetArrays
 
-using ..TypeSynonyms
 using ..Ellipticals: Weierstrass, term_expansion_normalized!
+
+struct PoleTerm
+    term ::OffsetVector{Dict{Variable, Coefficient}}
+end
+
+struct Cohesive
+    solution ::Dict{RationalComplex, PoleTerm}
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 struct Pole
     taylor_rows::UnitRange{Int64}
@@ -183,7 +217,6 @@ function push_to_wei_deltas!(deltas_dict::RComplex2IntDict, delta::RationalCompl
     end
 end
 
-end # module LShearCohesive
 
 #####################################################################
 ##  TESTING SECTION
