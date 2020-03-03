@@ -1,11 +1,65 @@
 module Symbolic
 
-using ..TypeSynonyms: RationalComplex
+using OffsetArrays
+
+using ..TypeSynonyms
 
 abstract type GeneralFunction end
 
 differentiate!(f::GeneralFunction) = 
     error("Differentiation is not defined in the concrete type")
+
+###############################################################################
+
+struct VarLinForm
+    form ::Dict{Variable, Coefficient}
+end
+
+VarLinForm() = VarLinForm(Dict{Variable, Coefficient}())
+
+Base.getindex(vlf::VarLinForm, key::Variable) = get(vlf.dict, key, 0.0im)
+
+Base.setindex!(vlf::VarLinForm, val::Coefficient, key::Variable) = setindex!(vlf.dict, val, key)
+
+###############################################################################
+
+struct Polynomial <: GeneralFunction
+    terms ::OffsetVector{VarLinForm}
+end
+
+function Polynomial(ind_range) 
+    Polynomial(
+        OffsetVector{VarLinForm}([VarLinForm() for i in ind_range], ind_range)
+        )
+end
+
+function max_abs_index(poly::Polynomial)
+    maximum(abs(firstindex(poly.terms)), abs(lastindex(poly.terms)))
+end
+
+function add_plain!(dest::Polynomial, source::Polynomial, factor::Float64=1.0)
+    for i in eachindex(source.terms)
+        for v in keys(source[i])
+            dest.terms[i][v] += source.terms[i][v] * factor
+        end
+    end
+end
+
+function add_conj!(dest::Polynomial, source::Polynomial, factor::Float64=1.0)
+    for i in eachindex(source.terms)
+        for v in keys(source[i])
+            dest.terms[-i][v] += source.terms[i][v] * factor
+        end
+    end
+end
+
+function add_z_conj_diff!(dest::Polynomial, source::Polynomial, factor::Float64=1.0)
+    for i in eachindex(source.terms)
+        for v in keys(source[i])
+            dest.terms[2-i][v] += i * conj(source.terms[i][v]) * factor
+        end
+    end
+end
 
 ###############################################################################
 

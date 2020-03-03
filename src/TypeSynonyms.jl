@@ -29,4 +29,10 @@ export Variable
 const Coefficient = ComplexF64
 export Coefficient
 
+const Pole = RationalComplex
+export Pole
+
+const Power = Int64
+export Power
+
 end # module TypeSynonims
