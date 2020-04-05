@@ -21,9 +21,17 @@ Base.getindex(vlf::VarLinForm, key::Variable) = get(vlf.dict, key, 0.0im)
 
 Base.setindex!(vlf::VarLinForm, val::Coefficient, key::Variable) = setindex!(vlf.dict, val, key)
 
+keys(vlf::VarLinForm) = keys(vlf.form)
+
+function mul!(vlf::VarLinForm, factor)
+    for k in keys(vlf)
+        vlf[k] *= factor
+    end
+end
+
 ###############################################################################
 
-struct Polynomial <: GeneralFunction
+struct Polynomial
     terms ::OffsetVector{VarLinForm}
 end
 
@@ -33,14 +41,24 @@ function Polynomial(ind_range)
         )
 end
 
+Base.getindex(poly::Polynomial, key::Variable) = poly.terms[key]
+
+###
+
+eachpower(p::Polynomial) = eachindex(p.terms)
+
+varkeys(poly::Polynomial, power::Int) = keys(poly[power])
+
 function max_abs_index(poly::Polynomial)
     maximum(abs(firstindex(poly.terms)), abs(lastindex(poly.terms)))
 end
 
-function add_plain!(dest::Polynomial, source::Polynomial, factor::Float64=1.0)
-    for i in eachindex(source.terms)
-        for v in keys(source[i])
-            dest.terms[i][v] += source.terms[i][v] * factor
+###############################################################################
+
+function add!(dest::Polynomial, source::Polynomial, factor::Float64=1.0)
+    for power in eachpower(source)
+        for v in varkeys(source, power)
+            dest[power][v] += source[power][v] * factor
         end
     end
 end
