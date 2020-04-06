@@ -7,59 +7,86 @@ using ..TypeSynonyms
 abstract type GeneralFunction end
 
 differentiate!(f::GeneralFunction) = 
-    error("Differentiation is not defined in the concrete type")
+error("Differentiation is not defined in the concrete type")
 
-###############################################################################
+abstract type GeneralPolynomial{T <: Number} end
 
-struct VarLinForm
-    form ::Dict{Variable, Coefficient}
-end
-
-VarLinForm() = VarLinForm(Dict{Variable, Coefficient}())
-
-Base.getindex(vlf::VarLinForm, key::Variable) = get(vlf.dict, key, 0.0im)
-
-Base.setindex!(vlf::VarLinForm, val::Coefficient, key::Variable) = setindex!(vlf.dict, val, key)
-
-keys(vlf::VarLinForm) = keys(vlf.form)
-
-function mul!(vlf::VarLinForm, factor)
-    for k in keys(vlf)
-        vlf[k] *= factor
+function add!(dest::GP, source::GP, factor::T) where GP <: GeneralPolynomial{T} where T
+    if matched_powers(dest, source)
+        for p in powers(dest)
+            dest[p] += source[p] * factor
+        end
+    else
+        error("Polynomials powers don't match")
     end
 end
 
 ###############################################################################
 
-struct Polynomial
-    terms ::OffsetVector{VarLinForm}
+mutable struct Binomial{T} <: GeneralPolynomial{T}
+    termA ::T
+    termB ::T
+    powA  ::Int
+    powB  ::Int
 end
 
-function Polynomial(ind_range) 
-    Polynomial(
-        OffsetVector{VarLinForm}([VarLinForm() for i in ind_range], ind_range)
-        )
+function Base.getindex(b::Binomial{T}, key::Int) where T
+    if key == b.powA 
+        return b.termA 
+    end
+    if key == b.powB 
+        return b.termB 
+    end
+    return zero(T)
 end
 
-Base.getindex(poly::Polynomial, key::Variable) = poly.terms[key]
-
-###
-
-eachpower(p::Polynomial) = eachindex(p.terms)
-
-varkeys(poly::Polynomial, power::Int) = keys(poly[power])
-
-function max_abs_index(poly::Polynomial)
-    maximum(abs(firstindex(poly.terms)), abs(lastindex(poly.terms)))
+function Base.setindex!(b::Binomial{T}, value::T, key::Int) where T
+    if key == b.powA 
+        b.termA = value
+        return 
+    end
+    if key == b.powB 
+        b.termB = value 
+        return
+    end
+    error("Key doesn't match Binomial powers")
 end
+
+powers(b::Binomial) = (b.powA, b.powB)
+
+matched_powers(b1::Binomial, b2::Binomial) = 
+(b1.powA == b2.powA) && (b1.powB == b2.powB)
 
 ###############################################################################
 
-function add!(dest::Polynomial, source::Polynomial, factor::Float64=1.0)
+struct Polynomial{T <: Number}
+    terms ::Dict{Int, T}
+end
+
+function Polynomial{T}() where T <: Number 
+    Polynomial(Dict{Int, T}())
+end
+
+Base.getindex(poly::Polynomial{T}, key::Int) where T <: Number = 
+get(poly.terms, key, zero(T))
+
+Base.setindex!(poly::Polynomial{T}, value::T, key::Int) where T <: Number =
+Base.setindex!(poly.terms, value, key)
+
+###
+
+eachpower(p::Polynomial) = keys(p.terms)
+
+function max_abs_index(poly::Polynomial)
+    powers = eachpower(poly)
+    max_power = maximum(powers)
+    min_power = minimum(powers)
+    maximum(abs(max_power), abs(min_power))
+end
+
+function add!(dest::Polynomial{T}, source::Polynomial{T}, factor::T) where T <: Number
     for power in eachpower(source)
-        for v in varkeys(source, power)
-            dest[power][v] += source[power][v] * factor
-        end
+        dest[power] += source[power] * factor
     end
 end
 
@@ -76,6 +103,26 @@ function add_z_conj_diff!(dest::Polynomial, source::Polynomial, factor::Float64=
         for v in keys(source[i])
             dest.terms[2-i][v] += i * conj(source.terms[i][v]) * factor
         end
+    end
+end
+
+###############################################################################
+
+struct VarLinForm
+    form ::Dict{Variable, Coefficient}
+end
+
+VarLinForm() = VarLinForm(Dict{Variable, Coefficient}())
+
+Base.getindex(vlf::VarLinForm, key::Variable) = get(vlf.dict, key, 0.0im)
+
+Base.setindex!(vlf::VarLinForm, val::Coefficient, key::Variable) = setindex!(vlf.dict, val, key)
+
+variables(vlf::VarLinForm) = keys(vlf.form)
+
+function add!(dest::VarLinForm, source::VarLinForm, factor=1)
+    for var in variables(source)
+        dest[var] += source[var] * factor
     end
 end
 

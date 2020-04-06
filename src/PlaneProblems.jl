@@ -2,15 +2,15 @@ module PlaneProblems
 
 using ..Input: CellData
 using ..TypeSynonyms
-using ..Symbolic: Polynomial, max_abs_index, add_plain!
-using ..Symbolic: add_conj!, add_z_conj_diff!
+using ..Symbolic: Polynomial, max_abs_index, add!
 
 struct Layer
     E::Float64
     ν::Float64
 
-    ϕ ::Polynomial
-    ψ ::Polynomial
+    ϕ         ::Polynomial
+    z_bar_Phi ::Polynomial
+    bar_ψ     ::Polynomial
 end
 
 function fill_slae!(layer::Layer, slae) 
