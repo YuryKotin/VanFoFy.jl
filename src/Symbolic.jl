@@ -4,109 +4,6 @@ using OffsetArrays
 
 using ..TypeSynonyms
 
-abstract type GeneralFunction end
-
-differentiate!(f::GeneralFunction) = 
-error("Differentiation is not defined in the concrete type")
-
-abstract type GeneralPolynomial{T <: Number} end
-
-function add!(dest::GP, source::GP, factor::T) where GP <: GeneralPolynomial{T} where T
-    if matched_powers(dest, source)
-        for p in powers(dest)
-            dest[p] += source[p] * factor
-        end
-    else
-        error("Polynomials powers don't match")
-    end
-end
-
-###############################################################################
-
-mutable struct Binomial{T} <: GeneralPolynomial{T}
-    termA ::T
-    termB ::T
-    powA  ::Int
-    powB  ::Int
-end
-
-function Base.getindex(b::Binomial{T}, key::Int) where T
-    if key == b.powA 
-        return b.termA 
-    end
-    if key == b.powB 
-        return b.termB 
-    end
-    return zero(T)
-end
-
-function Base.setindex!(b::Binomial{T}, value::T, key::Int) where T
-    if key == b.powA 
-        b.termA = value
-        return 
-    end
-    if key == b.powB 
-        b.termB = value 
-        return
-    end
-    error("Key doesn't match Binomial powers")
-end
-
-powers(b::Binomial) = (b.powA, b.powB)
-
-matched_powers(b1::Binomial, b2::Binomial) = 
-(b1.powA == b2.powA) && (b1.powB == b2.powB)
-
-###############################################################################
-
-struct Polynomial{T <: Number}
-    terms ::Dict{Int, T}
-end
-
-function Polynomial{T}() where T <: Number 
-    Polynomial(Dict{Int, T}())
-end
-
-Base.getindex(poly::Polynomial{T}, key::Int) where T <: Number = 
-get(poly.terms, key, zero(T))
-
-Base.setindex!(poly::Polynomial{T}, value::T, key::Int) where T <: Number =
-Base.setindex!(poly.terms, value, key)
-
-###
-
-eachpower(p::Polynomial) = keys(p.terms)
-
-function max_abs_index(poly::Polynomial)
-    powers = eachpower(poly)
-    max_power = maximum(powers)
-    min_power = minimum(powers)
-    maximum(abs(max_power), abs(min_power))
-end
-
-function add!(dest::Polynomial{T}, source::Polynomial{T}, factor::T) where T <: Number
-    for power in eachpower(source)
-        dest[power] += source[power] * factor
-    end
-end
-
-function add_conj!(dest::Polynomial, source::Polynomial, factor::Float64=1.0)
-    for i in eachindex(source.terms)
-        for v in keys(source[i])
-            dest.terms[-i][v] += source.terms[i][v] * factor
-        end
-    end
-end
-
-function add_z_conj_diff!(dest::Polynomial, source::Polynomial, factor::Float64=1.0)
-    for i in eachindex(source.terms)
-        for v in keys(source[i])
-            dest.terms[2-i][v] += i * conj(source.terms[i][v]) * factor
-        end
-    end
-end
-
-###############################################################################
 
 struct VarLinForm
     form ::Dict{Variable, Coefficient}
@@ -126,7 +23,153 @@ function add!(dest::VarLinForm, source::VarLinForm, factor=1)
     end
 end
 
+function add_conjugated!(dest::VarLinForm, source::VarLinForm, factor=1)
+    for var in variables(source)
+        dest[var] += conj(source[var] * factor)
+    end
+end
+
+
+function mul!(form::VarLinForm, factor)
+    for var in variables(form)
+        form[var] *= factor
+    end
+end
+
 ###############################################################################
+
+struct PolynomialForm
+    terms ::OffsetVector{VarLinForm}
+end
+
+function PolynomialForm(index_range) 
+    PolynomialForm(
+        OffsetVector{VarLinForm}([VarLinForm() for i in index_range], index_range)
+    )
+end
+
+Base.getindex(poly::PolynomialForm, key::Int) = poly.terms[key]
+
+firstindex(poly::PolynomialForm) = firstindex(poly.terms)
+lastindex(poly::PolynomialForm) = lastindex(poly.terms)
+eachpower(poly::PolynomialForm) = eachindex(poly.terms)
+
+function add!(dest::PolynomialForm, source::PolynomialForm, factor=1)
+    for power in eachpower(source)
+        add!(dest[power], source[power],  factor)
+    end
+end
+
+function mul!(poly::PolynomialForm, factor)
+    for power in eachpower(poly)
+        mul!(poly[power], factor)
+    end
+end
+
+"""
+    mul_by_power!(poly::PolynomialForm, factor)
+
+Transform z^n to (z^n * factor^n) for each polynomial term.
+Powers indices must encompass 0.
+"""
+function mul_by_power!(poly::PolynomialForm, factor)
+    bottom = firstindex(poly)
+    top  = lastindex(poly)
+    if (bottom <= 0) && (top >= 0)
+        min_bound = minimum(-bottom, top)
+        factor_pow = factor
+
+        # Transform central symmetrical part of polynomial
+        for power in 1 : min_bound
+            mul!(poly[power], factor_pow)
+            mul!(poly[-power], 1/factor_pow)
+            factor_pow *= factor
+        end
+
+        # Transform margins if any
+        for power in min_bound+1 : top
+            mul!(poly[power], factor_pow)
+            factor_pow *= factor
+        end
+        for power in min_bound+1 : -bottom
+            mul!(poly[-power], 1/factor_pow)
+            factor_pow *= factor
+        end
+    else
+        error("Indices don't encompass 0. This situation doesn't treated here")
+    end
+end
+
+"""
+    conjugate(poly::PolynomialForm)
+
+Create conjugated form of a given polynomial form.
+"""
+function conjugate(poly::PolynomialForm)
+    res = PolynomialForm(-eachpower(poly))
+    for i in eachpower(res)
+        add_conjugated!(res[i], poly[-i])
+    end
+    return res
+end
+
+"""
+    z_conj_diff(poly::PolynomialForm)
+
+For given polynomial form ϕ(z) creates z bar Φ(z).
+"""
+function z_conj_diff(poly::PolynomialForm)
+    bottom = firstindex(poly)
+    top    = lastindex(poly)
+    res = PolynomialForm(-top+2 : -bottom+2)
+
+    for n in eachpower(poly)
+        add_conjugated!(res[-n+2], poly[n], n)
+    end
+    return res
+end
+
+function matrix_form(poly::PolynomialForm)
+    bottom = firstindex(poly)
+    top    = lastindex(poly)
+    min_var_n, max_var_n = extrema(variables(poly[bottom]))
+    for n in bottom+1 : top
+        min_n, max_n = extrema(variables(poly[n]))
+        (min_n < min_var_n) && (min_var_n = min_n)
+        (max_n < max_var_n) && (max_var_n = max_n)
+    end
+
+    matrix = OffsetArray{ComplexF64, 2}(undef, bottom:top, min_var_n:max_var_n)
+    fill!(matrix, 0.0im)
+
+    for pow in eachpower(poly)
+        for var in variables(poly[pow])
+            matrix[pow, var] = poly[pow][var]
+        end
+    end
+
+    return matrix
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###############################################################################
+
+abstract type GeneralFunction end
 
 """
   (z/r)^n
