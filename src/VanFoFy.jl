@@ -4,6 +4,7 @@ include("all_modules.jl")
 
 using .Input: CellData
 using .Ellipticals: Weierstrass, Theta, theta
+using .Symbolic: VarLinForm, variables, add!, add_conjugated!, mul!
 
 function construct_problem(cell::CellData)
     wei = Weierstrass(cell)
@@ -14,5 +15,7 @@ function construct_problem(cell::CellData)
 end
 
 export Theta, theta
+export VarLinForm, variables, add!, add_conjugated!, mul!
+
 
 end # module

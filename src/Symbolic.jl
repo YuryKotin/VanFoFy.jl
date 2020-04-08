@@ -11,9 +11,9 @@ end
 
 VarLinForm() = VarLinForm(Dict{Variable, Coefficient}())
 
-Base.getindex(vlf::VarLinForm, key::Variable) = get(vlf.dict, key, 0.0im)
+Base.getindex(vlf::VarLinForm, key::Variable) = get(vlf.form, key, 0.0im)
 
-Base.setindex!(vlf::VarLinForm, val::Coefficient, key::Variable) = setindex!(vlf.dict, val, key)
+Base.setindex!(vlf::VarLinForm, val::Coefficient, key::Variable) = setindex!(vlf.form, val, key)
 
 variables(vlf::VarLinForm) = keys(vlf.form)
 
@@ -42,7 +42,7 @@ struct PolynomialForm
     terms ::OffsetVector{VarLinForm}
 end
 
-function PolynomialForm(index_range) 
+function PolynomialForm(index_range::UnitRange) 
     PolynomialForm(
         OffsetVector{VarLinForm}([VarLinForm() for i in index_range], index_range)
     )
@@ -165,7 +165,7 @@ end
 
 
 
-
+#= 
 
 ###############################################################################
 
@@ -307,5 +307,5 @@ function mul!(form <:FunctionalForm, factor::Float64)
     map(f!, form.terms)
     nothing
 end
-
+ =#
 end # module Symbolic

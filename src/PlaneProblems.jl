@@ -2,6 +2,8 @@ module PlaneProblems
 
 using ..Input: CellData
 using ..TypeSynonyms
+
+#=
 using ..Symbolic: Polynomial, max_abs_index, add!
 
 struct Layer
@@ -78,5 +80,7 @@ function fill_slae!(plane_problem::PlaneProblem)
 
     # TODO averaging
 end
+
+=#
 
 end # module PlaneProblems

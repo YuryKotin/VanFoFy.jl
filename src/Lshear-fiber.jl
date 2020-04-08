@@ -1,3 +1,4 @@
+#=
 struct Layer
     solution ::OffsetVector{Dict{Variable, Coefficient}}
 end
@@ -5,3 +6,4 @@ end
 struct Fiber
     layers ::Vector{Layer}
 end
+=#
