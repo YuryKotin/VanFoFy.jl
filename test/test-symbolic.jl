@@ -1,9 +1,8 @@
 module TestSymbolic
 
 using Test
-using VanFoFy
 
-#using VanFoFy#: VarLinForm, variables, add!, add_conjugated!, mul!
+using VanFoFy: VarLinForm, variables, add!, add_conjugated!, mul!
 
 @testset "VarLinForm" begin
     form1 = VarLinForm()
