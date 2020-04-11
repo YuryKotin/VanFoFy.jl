@@ -1,3 +1,4 @@
+using Test, OffsetArrays
 using VanFoFy.Ellipticals: Theta, theta
 
 @testset "θ-functions" begin

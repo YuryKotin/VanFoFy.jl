@@ -5,27 +5,27 @@ using OffsetArrays
 using ..TypeSynonyms
 
 
-struct VarLinForm
-    form ::Dict{Variable, Coefficient}
+struct VarLinForm{T}
+    form ::Dict{Int, T}
 end
 
-VarLinForm() = VarLinForm(Dict{Variable, Coefficient}())
+VarLinForm{T}() where T = VarLinForm(Dict{Int, T}())
 
-Base.getindex(vlf::VarLinForm, key::Variable) = get(vlf.form, key, 0.0im)
+Base.getindex(vlf::VarLinForm{T}, key::Int) where T = get(vlf.form, key, zero(T))
 
-Base.setindex!(vlf::VarLinForm, val::Coefficient, key::Variable) = setindex!(vlf.form, val, key)
+Base.setindex!(vlf::VarLinForm{T}, val::T, key::Int) where T = setindex!(vlf.form, val, key)
 
 variables(vlf::VarLinForm) = keys(vlf.form)
 
-function add!(dest::VarLinForm, source::VarLinForm, factor=1)
+function add!(dest::VarLinForm{T}, source::VarLinForm{T}, factor=1) where {T}
     for var in variables(source)
         dest[var] += source[var] * factor
     end
 end
 
-function add_conjugated!(dest::VarLinForm, source::VarLinForm, factor=1)
+function add_conjugated!(dest::VarLinForm{T}, source::VarLinForm{T}, factor=1) where {T}
     for var in variables(source)
-        dest[var] += conj(source[var] * factor)
+        dest[var] += conj(source[var]) * factor
     end
 end
 
@@ -38,13 +38,13 @@ end
 
 ###############################################################################
 
-struct PolynomialForm
-    terms ::OffsetVector{VarLinForm}
+struct PolynomialForm{N <: Number}
+    terms ::OffsetVector{ VarLinForm{N} }
 end
 
-function PolynomialForm(index_range::UnitRange) 
+function PolynomialForm{N}(index_range::UnitRange) where {N <: Number}
     PolynomialForm(
-        OffsetVector{VarLinForm}([VarLinForm() for i in index_range], index_range)
+        OffsetVector{VarLinForm{N}}([VarLinForm{N}() for i in index_range], index_range)
     )
 end
 
@@ -54,7 +54,7 @@ firstindex(poly::PolynomialForm) = firstindex(poly.terms)
 lastindex(poly::PolynomialForm) = lastindex(poly.terms)
 eachpower(poly::PolynomialForm) = eachindex(poly.terms)
 
-function add!(dest::PolynomialForm, source::PolynomialForm, factor=1)
+function add!(dest::PolynomialForm{N}, source::PolynomialForm{N}, factor=1) where {N}
     for power in eachpower(source)
         add!(dest[power], source[power],  factor)
     end
@@ -105,8 +105,8 @@ end
 
 Create conjugated form of a given polynomial form.
 """
-function conjugate(poly::PolynomialForm)
-    res = PolynomialForm(-eachpower(poly))
+function conjugate(poly::PolynomialForm{N}) where {N}
+    res = PolynomialForm{N}(-eachpower(poly))
     for i in eachpower(res)
         add_conjugated!(res[i], poly[-i])
     end
@@ -118,10 +118,10 @@ end
 
 For given polynomial form ϕ(z) creates z bar Φ(z).
 """
-function z_conj_diff(poly::PolynomialForm)
+function z_conj_diff(poly::PolynomialForm{N}) where {N}
     bottom = firstindex(poly)
     top    = lastindex(poly)
-    res = PolynomialForm(-top+2 : -bottom+2)
+    res = PolynomialForm{N}(-top+2 : -bottom+2)
 
     for n in eachpower(poly)
         add_conjugated!(res[-n+2], poly[n], n)
@@ -129,7 +129,7 @@ function z_conj_diff(poly::PolynomialForm)
     return res
 end
 
-function matrix_form(poly::PolynomialForm)
+function matrix_form(poly::PolynomialForm{N}) where {N}
     bottom = firstindex(poly)
     top    = lastindex(poly)
     min_var_n, max_var_n = extrema(variables(poly[bottom]))
@@ -139,8 +139,8 @@ function matrix_form(poly::PolynomialForm)
         (max_n < max_var_n) && (max_var_n = max_n)
     end
 
-    matrix = OffsetArray{ComplexF64, 2}(undef, bottom:top, min_var_n:max_var_n)
-    fill!(matrix, 0.0im)
+    matrix = OffsetArray{N, 2}(undef, bottom:top, min_var_n:max_var_n)
+    fill!(matrix, zero(N))
 
     for pow in eachpower(poly)
         for var in variables(poly[pow])

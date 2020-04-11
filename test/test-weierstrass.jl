@@ -1,3 +1,6 @@
+using Test, OffsetArrays
+using VanFoFy
+#=
 ω1 = complex(1.0)
 ω3 = exp(1im)
 wei = WeierstrassData(ω1=ω1, ω3=ω3)
@@ -40,3 +43,4 @@ end
                         upper_term=10, output=output)
     @test output[-2 : 10] ≈ ref_array[-2 : 10] atol=1e-10
 end
+=#
