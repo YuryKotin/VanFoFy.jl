@@ -1,3 +1,37 @@
+struct CashedVector{N <: Number}
+    array ::OffsetVector{N}
+    last_cashed ::Int
+end
+
+function CashedVector{N}(range ::UnitRange{Int}) where {N <: Number}
+    array = OffsetVector{N}(undef, range)
+    last_cashed = firstindex(array) - 1
+    CashedVector(array, last_cashed)
+end
+
+function Base.getindex(v::CashedVector{N} , index::Int) where {N}
+    if index <= v.last_cashed
+       return v.array[index] 
+    else
+        error("Access to undefined values")
+    end
+end
+
+function Base.setindex!(v::CashedVector{N}, val::N, index::Int) where {N}
+    if index == v.last_cashed+1
+        v.array[index] = val
+        v.last_cashed += 1
+    elseif index <= v.last_cashed
+        v.array[index] = val
+    else
+        error("Access to undefined values")
+    end
+end
+
+last_cashed(v::CashedVector{N}) where N = v.last_cashed
+
+not_cashed(v::CashedVector{N}, ind::Int) where N = (ind > v.last_cashed)
+
 ###############################################################################
 ##### Weierstrass elliptic functions
 ###############################################################################
@@ -19,6 +53,8 @@ struct Weierstrass <: EllipticFunction
     σ_factor      ::  ComplexF64
     # θ-function data
     θ             ::  Theta
+    cash          ::  Dict{RationalComplex, CashedVector{ComplexF64}}
+    max_derivative ::Int
 end
 
 """
@@ -29,7 +65,8 @@ Construct WeierstrassData object from lattice generators ω1 and ω3
 function Weierstrass(;
         ω1::ComplexF64,
         ω3::ComplexF64,
-        θ ::Theta
+        θ ::Theta,
+        max_derivative ::Int
         )
     #####
     tolerance = eps(imag(ω3))
@@ -57,7 +94,82 @@ function Weierstrass(;
 
     σ_factor = 2ω1 / (π*d1th1)
 
-    return Weierstrass(ω1, ω3, e1, g2, g3, η1, ℘_factor, σ_factor, θ)
+    cash = Dict{RationalComplex, CashedVector{ComplexF64}}()
+
+    return Weierstrass(ω1, ω3, e1, g2, g3, η1, ℘_factor, σ_factor, θ, cash, max_derivative)
+end
+
+function cash_elder_derivs!(n_deriv::Int, output::CashedVector{ComplexF64})
+    # wp_{n+2}(z) = frac{6}{(n+1)(n+2)} sum_{k=0}^n wp_k(z) wp_{n-k}(z),
+    # n >= 1.
+    last_cashed_deriv = last_cashed(output)
+    for n in last_cashed_deriv-1 : n_deriv-2
+        res = 0.0im
+        for k in 0 : n
+            res += output[k] * output[n-k]
+        end
+        res *= 6.0 / ((n+1) * (n+2))
+        output[n+2] = res
+    end
+end
+
+plane_complex(w::Weierstrass, z::RationalComplex) = real(z)*w.ω1 + imag(z)*w.ω3
+
+function cash_first_derivs!(w::Weierstrass, rz::RationalComplex, output::CashedVector{ComplexF64})
+    ω1 = w.ω1
+    e1 = w.e1
+    η1 = w.η1
+    g2 = w.g2
+    ℘_factor = w.℘_factor
+    σ_factor = w.σ_factor
+
+    z = plane_complex(w,rz)
+    norm_factor = abs(z)
+
+    u = (π / (2ω1)) * z
+    th1, th2, dth1, dth2 = theta(w.θ, u)
+    th1_norm = th1 / norm_factor
+
+    ζ = (π/(2ω1)) * (dth1/th1_norm)
+    ζ += norm_factor * (η1 / ω1) * z
+
+    ℘ = ℘_factor * (th2 / th1_norm)^2
+    ℘ += norm_factor^2 * e1
+
+    ℘_prime = th1 * th2 * dth2 - dth1 * th2 * th2
+    ℘_prime /= th1_norm^3
+    ℘_prime *= (π / ω1) * ℘_factor
+
+    ℘_pp = 6*℘*℘ - 0.5 * g2 * norm_factor^4
+
+    output[-1] = -ζ
+    output[0] = ℘             # /0!
+    output[1] = ℘_prime       # /1!
+    output[2] = ℘_pp / 2.0    # /2!
+end
+
+
+function Base.getindex(w::Weierstrass, rz::RationalComplex, n_deriv::Int)
+    if rz == 0
+        error("Can't compute Weierstrass elliptic functions at zero point")
+    end
+
+    if rz in keys(w.cash)
+        vector = w.cash[rz]
+        sign = 1.0
+    elseif -rz in keys(w.cash)
+        vector = w.cash[-rz]
+        sign = (n_deriv % 2 == 0) ? 1.0 : -1.0
+    else
+        vector = CashedVector{ComplexF64}(-1:w.max_derivative)
+        cash_first_derivs!(w, rz, vector)
+        sign = 1.0
+    end
+
+    if not_cashed(vector, n_deriv)
+        cash_elder_derivs!(w, rz, n_deriv)
+    end
+    return vector[n_deriv]*sign
 end
 
 """
