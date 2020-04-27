@@ -152,6 +152,24 @@ function matrix_form(poly::PolynomialForm{N}) where {N}
 end
 
 
+#######################################
+
+struct NormedPolynomial{N <: Number, FL <: AbstractFloat}
+    poly ::PolynomialForm{N}
+    r_norm ::FL
+end
+
+function add!(dest::NormedPolynomial, source::NormedPolynomial, factor=1) end
+
+function empty!(normed_poly::NormedPolynomial) end
+
+function conjugate(normed_poly::NormedPolynomial, r_contour) end
+
+function re_conjugate!(normed_poly::NormedPolynomial, r_old, r_new) end
+
+function z_conj_diff(normed_poly::NormedPolynomial, r_contour) end
+
+function matrix_form(normed_poly::NormedPolynomial) end
 
 
 
@@ -164,12 +182,19 @@ end
 
 
 
+#=
 
-#= 
 
 ###############################################################################
 
 abstract type GeneralFunction end
+
+struct FunctionalTerm{F <: GeneralFunction}
+    func   ::F
+    factor ::Variable
+end
+
+
 
 """
   (z/r)^n
@@ -307,5 +332,5 @@ function mul!(form <:FunctionalForm, factor::Float64)
     map(f!, form.terms)
     nothing
 end
- =#
+=#
 end # module Symbolic

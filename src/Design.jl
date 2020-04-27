@@ -2,6 +2,8 @@ module Design
 
 using OffsetArrays
 
+const Float = Float64
+
 #==============================================================================
 Polynomials
 ==============================================================================#
@@ -12,13 +14,13 @@ struct VarLinForm{T}
 end
 
 #DONE
-function add!(dest, source, factor=1) end
+function add!(dest<:VarLinForm, source<:VarLinForm, factor=1) end
 
 #DONE
-function add_conjugated!(dest, source, factor=1) end
+function add_conjugated!(dest<:VarLinForm, source<:VarLinForm, factor=1) end
 
 #DONE
-function mul!(form, factor) end
+function mul!(form<:VarLinForm, factor) end
 
 #######################################
 
@@ -26,17 +28,17 @@ struct PolynomialForm{N <: Number}
     terms ::OffsetVector{ VarLinForm{N} }
 end
 
-function add!(dest, source, factor=1) end
+function add!(dest<:PolynomialForm, source<:PolynomialForm, factor=1) end
 
-function mul!(poly, factor) end
+function mul!(poly<:PolynomialForm, factor) end
 
-function mul_by_power!(poly, factor) end
+function mul_by_power!(poly<:PolynomialForm, factor) end
 
-function conjugate(poly) end
+function conjugate(poly<:PolynomialForm) end
 
-function z_conj_diff(poly) end
+function z_conj_diff(poly<:PolynomialForm) end
 
-function matrix_form(poly) end
+function matrix_form(poly<:PolynomialForm) end
 
 #######################################
 
@@ -45,64 +47,108 @@ struct NormedPolynomial{N <: Number, FL <: AbstractFloat}
     r_norm ::FL
 end
 
-function add!(dest::NormedPolynomial, source::NormedPolynomial, factor=1) end
+function add!(dest<:NormedPolynomial, source<:NormedPolynomial, factor=1) end
 
-function empty!(normed_poly::NormedPolynomial) end
+function empty!(normed_poly<:NormedPolynomial) end
 
-function conjugate(normed_poly::NormedPolynomial, r_contour) end
+function conjugate(normed_poly<:NormedPolynomial, r_contour) end
 
-function re_conjugate!(normed_poly::NormedPolynomial, r_old, r_new) end
+function re_conjugate!(normed_poly<:NormedPolynomial, r_old, r_new) end
 
-function z_conj_diff(normed_poly::NormedPolynomial, r_contour) end
+function z_conj_diff(normed_poly<:NormedPolynomial, r_contour) end
 
-function matrix_form(normed_poly::NormedPolynomial) end
+function matrix_form(normed_poly<:NormedPolynomial) end
 
 #######################################
 
-struct PlaneLayer{FL <: AbstractFloat}
-    E       ::FL
-    ν       ::FL
-    r_inner ::FL
-    r_outer ::FL
-    ϕ       ::NormedPolynomial{Complex{FL}, FL}
-    z_bar_Φ ::NormedPolynomial{Complex{FL}, FL}
-    bar_ψ   ::NormedPolynomial{Complex{FL}, FL}
+struct PlaneLayer
+    E       ::Float
+    ν       ::Float
+    r_inner ::Float
+    r_outer ::Float
+    ϕ       ::NormedPolynomial{Complex{Float}, Float}
+    z_bar_Φ ::NormedPolynomial{Complex{Float}, Float}
+    bar_ψ   ::NormedPolynomial{Complex{Float}, Float}
 end
 
-function couple!(dest::PlaneLayer, source::PlaneLayer) 
-    if dest.r_inner != source.r_outer
-        error("Layers don't touch")
-    end
+function couple!(dest::PlaneLayer, source::PlaneLayer) end
 
-    E1 = source.E
-    ν1 = source.ν
-    G1 = E1/(2*(1+ν1))
-    κ1 = 3 - 4*ν1
+function displacements(layer::PlaneLayer) end
 
-    E2 = dest.E
-    ν2 = dest.ν
-    κ2 = 3 - 4*ν2
-    G2 = E2/(2*(1+ν2))
+function forces(layer::PlaneLayer) end
 
-    empty!(dest.ϕ)
-    empty!(dest.z_bar_Φ)
-    empty!(dest.bar_ψ)
+#######################################
 
-    add!(dest.ϕ, source.ϕ,       (1+κ1*G2/G1)/(1+κ2))
-    add!(dest.ϕ, source.z_bar_Φ, (1-G2/G1)   /(1+κ2))
-    add!(dest.ϕ, source.bar_ψ,   (1-G2/G1)   /(1+κ2))
-
-    dest.z_bar_Φ = z_conj_diff(dest.ϕ, dest.r_inner)
-
-    add!(dest.bar_ψ, source.ϕ,       1/(1+κ2))
-    add!(dest.bar_ψ, source.z_bar_Φ, 1/(1+κ2))
-    add!(dest.bar_ψ, source.bar_ψ,   1/(1+κ2))
-    add!(dest.bar_ψ, dest.ϕ,        -1/(1+κ2))
-    add!(dest.bar_ψ, dest.z_bar_Φ,      -1/(1+κ2))
-
-    re_conjugate!(dest.bar_ψ,   dest.r_inner, dest.r_outer)
-    re_conjugate!(dest.z_bar_Φ, dest.r_inner, dest.r_outer)
+struct PlaneFiber
+    layers ::Vector{PlaneLayer{Float}}
+    var_indices ::UnitRange{Int}
+    max_power ::Int
 end
+
+displacements(fiber::PlaneFiber) = displacements(fiber.layers[end])
+
+forces(fiber::PlaneFiber) = forces(fiber.layers[end])
+
+#######################################
+
+struct PlaneCohesive end
+
+function displacements(cohesive::PlaneCohesive) end
+
+function forces(cohesive::PlaneCohesive) end
+
+#######################################
+
+struct PlaneCell
+    fibers ::Vector{ PlaneFiber{Float} }
+    cohesive ::PlaneCohesive{Float}
+    slae_A ::Matrix{Float}
+end
+
+function fill_slae_from_fibers!(cell::PlaneCell)
+
+end
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+struct Contour
+    center    ::Complex{ Rational{Int} }
+    radius    ::Float
+    max_power ::Int
+end
+
+abstract type ProblemType end
+
+abstract type Fiber{P <: ProblemType} end
+
+abstract type Cohesive{P <: ProblemType} end
+
+abstract type SubMatrixType{P <: ProblemType} end
+
+struct SubMatrix_Zero{P <: ProblemType} <: SubMatrixType{P}
+    contour ::Contour
+end
+
+struct SubMatrix_Fiber{P <: ProblemType} <: SubMatrixType{P}
+    contour ::Contour
+    fiber   ::Fiber{P}
+end
+
+struct SubMatrix_Cohesive{P <: ProblemType} <: SubMatrixType{P}
+    contour  ::Contour
+    cohesive ::Cohesive{P}
+end
+
+abstract type SubMatrix_Averaging{P <: ProblemType} <: SubMatrixType{P} end
+
+struct ReferenceMatrix{P <: ProblemType}
+    matrix ::Matrix{ SubMatrixType{P} }
+end
+
+
+
 
 #==============================================================================
 Ellipticals

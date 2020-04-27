@@ -1,11 +1,11 @@
 module TestSymbolic
 
 using Test
-using VanFoFy: VarLinForm, variables, add!, add_conjugated!, mul!
+using VanFoFy.Symbolic: VarLinForm, variables, add!, add_conjugated!, mul!
 
 function test()
     @testset "VarLinForm" begin
-        form1 = VarLinForm()
+        form1 = VarLinForm{ComplexF64}()
         @test length(variables(form1)) == 0
         
         @test form1[5] == 0.0im
@@ -13,7 +13,7 @@ function test()
         form1[5] = 2.0+3.0im
         @test form1[5] == 2.0+3.0im
 
-        form2 = VarLinForm()
+        form2 = VarLinForm{ComplexF64}()
         form2[3] = 1.0-8.0im
         add!(form1, form2, 2)
         @test form1[5] == 2.0+3.0im
