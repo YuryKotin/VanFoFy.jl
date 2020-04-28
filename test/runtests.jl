@@ -14,5 +14,5 @@ end
 ####
 
 #@include_testset("test-theta.jl")
-#@include_testset("test-weierstrass.jl")
-@include_testset("test-symbolic.jl")
+@include_testset("test-weierstrass.jl")
+#@include_testset("test-symbolic.jl")

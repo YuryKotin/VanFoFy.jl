@@ -1,5 +1,5 @@
 module Design
-
+#=
 using OffsetArrays
 
 const Float = Float64
@@ -158,5 +158,5 @@ struct EllipticPraecursor{FL <: AbstractFloat}
     terms :: OffsetVector{ Complex{FL} }
 end
 
-
+=#
 end # module Design

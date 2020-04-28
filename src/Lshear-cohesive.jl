@@ -1,3 +1,4 @@
+#=
 using OffsetArrays
 
 using ..Ellipticals: Weierstrass, term_expansion_normalized!
@@ -9,34 +10,6 @@ end
 struct Cohesive
     solution ::Dict{RationalComplex, PoleTerm}
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 struct Pole
@@ -367,3 +340,4 @@ end
 
 # run_tests()
 # # run_benchmarks()
+=#

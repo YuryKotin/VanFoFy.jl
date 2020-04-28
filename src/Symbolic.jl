@@ -1,5 +1,5 @@
 module Symbolic
-
+#=
 using OffsetArrays
 
 using ..TypeSynonyms
@@ -173,16 +173,6 @@ function matrix_form(normed_poly::NormedPolynomial) end
 
 
 
-
-
-
-
-
-
-
-
-
-#=
 
 
 ###############################################################################

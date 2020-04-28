@@ -5,13 +5,47 @@ using OffsetArrays
 using ..TypeSynonyms
 using ..Input: FiberData, CellData
 
+mutable struct CashedVector{N <: Number}
+    array ::OffsetVector{N}
+    last_cashed ::Int
+end
+
+function CashedVector{N}(range ::UnitRange{Int}) where {N <: Number}
+    array = OffsetVector{N}(undef, range)
+    last_cashed = firstindex(array) - 1
+    CashedVector(array, last_cashed)
+end
+
+function Base.getindex(v::CashedVector{N} , index::Int) where {N}
+    if index <= v.last_cashed
+       return v.array[index] 
+    else
+        error("Access to undefined values")
+    end
+end
+
+function Base.setindex!(v::CashedVector{N}, val::N, index::Int) where {N}
+    if index == v.last_cashed+1
+        v.array[index] = val
+        v.last_cashed += 1
+    elseif index <= v.last_cashed
+        v.array[index] = val
+    else
+        error("Access to undefined values")
+    end
+end
+
+last_cashed(v::CashedVector{N}) where N = v.last_cashed
+
+not_cashed(v::CashedVector{N}, ind::Int) where N = (ind > v.last_cashed)
+
 abstract type EllipticFunction end
 
 include("Ellipticals-Theta.jl")
 include("Ellipticals-Weierstrass.jl")
 include("Ellipticals-QSpecial.jl")
 include("Ellipticals-Series.jl")
-
+#=
 struct Elliptical
     ℘ ::Weierstrass
     Q ::QSpecial
@@ -110,5 +144,5 @@ function Elliptical(data::CellData)
     end
     # TODO
 end
-
+=#
 end # module Ellipticals
