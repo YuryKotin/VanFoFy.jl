@@ -1,3 +1,4 @@
+#=
 """
   derivative_series_from_initial!(; initial_series::ComplexOffsetVector, 
     derivatives_series ::ComplexOffsetMatrix)
@@ -96,3 +97,4 @@ function construct_dict_of_wei_series(;
 
     return wei_series_dict
 end
+=#

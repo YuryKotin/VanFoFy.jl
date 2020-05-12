@@ -1,3 +1,4 @@
+#=
 module TestSymbolic
 
 using Test
@@ -48,3 +49,4 @@ end
 end # module TestSymbolic
 using .TestSymbolic
 TestSymbolic.test()
+=#

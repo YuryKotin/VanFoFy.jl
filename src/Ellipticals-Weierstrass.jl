@@ -67,7 +67,7 @@ function Weierstrass(
     return Weierstrass(ω1, ω3, e1, g2, g3, η1, ℘_factor, σ_factor, θ, cash, max_derivative)
 end
 
-function cash_elder_derivs!(output::CashedVector{ComplexF64}, n_deriv::Int)
+function cash_wei_elder_derivs!(output::CashedVector{ComplexF64}, n_deriv::Int)
     # wp_{n+2}(z) = frac{6}{(n+1)(n+2)} sum_{k=0}^n wp_k(z) wp_{n-k}(z),
     # n >= 1.
     last_cashed_deriv = last_cashed(output)
@@ -83,7 +83,7 @@ end
 
 raw_complex(w::Weierstrass, rz::RationalComplex) = real(rz)*w.ω1 + imag(rz)*w.ω3
 
-function cash_first_derivs!(w::Weierstrass, rz::RationalComplex, output::CashedVector{ComplexF64})
+function cash_wei_first_derivs!(w::Weierstrass, rz::RationalComplex, output::CashedVector{ComplexF64})
     ω1 = w.ω1
     e1 = w.e1
     η1 = w.η1
@@ -130,12 +130,12 @@ function Base.getindex(w::Weierstrass, rz::RationalComplex, n_deriv::Int)
         sign = (n_deriv % 2 == 0) ? 1.0 : -1.0
     else
         vector = CashedVector{ComplexF64}(-1:w.max_derivative)
-        cash_first_derivs!(w, rz, vector)
+        cash_wei_first_derivs!(w, rz, vector)
         sign = 1.0
     end
 
     if not_cashed(vector, n_deriv)
-        cash_elder_derivs!(vector, n_deriv)
+        cash_wei_elder_derivs!(vector, n_deriv)
     end
     return vector[n_deriv]*sign
 end
