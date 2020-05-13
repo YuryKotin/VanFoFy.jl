@@ -95,7 +95,7 @@ function cash_wei_first_derivs!(w::Weierstrass, rz::RationalComplex, output::Cas
     norm_factor = abs(z)
 
     u = (π / (2ω1)) * z
-    th1, th2, dth1, dth2 = theta(w.θ, u)
+    th1, th2, dth1, dth2 = theta12(w.θ, u)
     th1_norm = th1 / norm_factor
 
     ζ = (π/(2ω1)) * (dth1/th1_norm)

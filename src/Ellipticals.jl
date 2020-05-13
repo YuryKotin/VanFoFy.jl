@@ -2,7 +2,7 @@ module Ellipticals
 
 using OffsetArrays
 
-using ..TypeSynonyms
+using ..TypeSynonyms: RationalComplex
 using ..Input: FiberData, CellData
 
 mutable struct CashedVector{N <: Number}
@@ -45,6 +45,12 @@ include("Ellipticals-Theta.jl")
 include("Ellipticals-Weierstrass.jl")
 include("Ellipticals-QSpecial.jl")
 include("Ellipticals-Series.jl")
+
+struct EllipticPraecursor
+    ℘ ::Weierstrass
+    Q ::QSpecial
+end
+
 #=
 struct Elliptical
     ℘ ::Weierstrass

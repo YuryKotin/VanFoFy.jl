@@ -78,11 +78,11 @@ function precompute_nome_powers(
 end
 
 @doc """
-  theta(th::Theta, z::ComplexF64)
+  theta12(th::Theta, z::ComplexF64)
 
 Compute θ_1(z), θ_2(z), θ_1'(z), θ_2'(z) with given precomputed array of nome powers.
 """
-function theta(
+function theta12(
         th ::Theta,
         z  ::ComplexF64
         )
@@ -115,7 +115,7 @@ end
 
 
 """"
-  theta(θ::Theta; th_k::Integer, d_n::Integer,z::ComplexF64)
+  theta(θ::Theta; th_k::Int, d_n::Int,z::ComplexF64)
 
 Compute ``\\frac{d^n}{dz^n} \\theta_k(z, q)`` with tolerance `ϵ`.
 """
@@ -123,9 +123,9 @@ function theta(
         # Theta data struct
         th ::Theta;
         # theta-function number
-        th_k ::Integer,
+        th_k ::Int,
         # derivative number
-        d_n  ::Integer,
+        d_n  ::Int,
         # point for computation
         z    ::ComplexF64,
         )

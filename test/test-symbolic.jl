@@ -1,10 +1,21 @@
-#=
 module TestSymbolic
 
-using Test
-using VanFoFy.Symbolic: VarLinForm, variables, add!, add_conjugated!, mul!
+using Test, OffsetArrays
+#using VanFoFy.Symbolic: VarLinForm, variables, add!, add_conjugated!, mul!
+using VanFoFy.Symbolic: SymbolicSolution, FunctionalTerm
+using VanFoFy.Symbolic: SymbolicFunction, SymbolicWeierstrass, SymbolicQ, SymbolicZ, SymbolicConst
 
 function test()
+    @testset "SymbolicSolution" begin
+        ss = OffsetVector{FunctionalTerm}(undef, 10:20)
+
+        ss[15] = FunctionalTerm{SymbolicWeierstrass}(0.0im, 1.0+0.0im, 1.0, 1)
+        @test ss[15] isa FunctionalTerm{SymbolicWeierstrass}
+
+        ss[14] = FunctionalTerm{SymbolicQ}(0.0im, 1.0+0.0im, 1.0, 1)
+        @test ss[14] isa FunctionalTerm{SymbolicQ}
+    end
+    #=
     @testset "VarLinForm" begin
         form1 = VarLinForm{ComplexF64}()
         @test length(variables(form1)) == 0
@@ -45,8 +56,9 @@ function test()
         @test form1[5] == 8.0im-4.0
         @test form1[3] == 14.0im - 0.0
     end
+    =#
 end
+
 end # module TestSymbolic
 using .TestSymbolic
 TestSymbolic.test()
-=#

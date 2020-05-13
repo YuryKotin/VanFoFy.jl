@@ -1,4 +1,128 @@
 module Symbolic
+
+using ..TypeSynonyms: RationalComplex, ComplexOffsetVector
+using ..Ellipticals: EllipticPraecursor
+
+using OffsetArrays
+
+abstract type EllipticalTerm end
+
+struct WeierstrassTerm <: EllipticalTerm
+    deriv      ::Int
+    pole      ::ComplexF64
+    num_factor ::ComplexF64
+    norm_r     ::Float64
+end
+
+struct QSpecialTerm <: EllipticalTerm
+    deriv      ::Int
+    pole      ::ComplexF64
+    num_factor ::ComplexF64
+    norm_r     ::Float64
+end
+
+struct ZTerm <: EllipticalTerm
+    num_factor ::ComplexF64
+end
+
+struct ConstTerm <: EllipticalTerm
+    num_factor ::ComplexF64
+end
+
+###############################################################################
+
+function differentiate(term::EllipticalTerm) end
+
+function differentiate(term::WeierstrassTerm)
+    # (r^{n+2}/(n+1)! ℘^{(n)}(z))' = [(n+2)/r] [r^(n+3)/(n+2)! ℘^{(n+1)}(z)]
+    deriv = term.deriv + 1
+    pole = term.pole
+    num_factor = term.num_factor * (term.deriv + 2) / term.norm_r
+    norm_r = term.norm_r
+    WeierstrassTerm(deriv, pole, num_factor, norm_r)
+end
+
+function differentiate(term::QSpecialTerm)
+    # (r^{n+2}/(n+1)! Q^{(n)}(z))' = [(n+2)/r] [r^(n+3)/(n+2)! Q^{(n+1)}(z)]
+    deriv = term.deriv + 1
+    pole = term.pole
+    num_factor = term.num_factor * (term.deriv + 2) / term.norm_r
+    norm_r = term.norm_r
+    QSpecialTerm(deriv, pole, num_factor, norm_r)
+end
+
+differentiate(term::ZTerm) = ConstTerm(term.num_factor)
+
+differentiate(term::ConstTerm) = ConstTerm(0.0im)
+
+###############################################################################
+
+const EllipticalLinForm = OffsetArray{EllipticalTerm, 1, Array{EllipticalTerm, 1}}
+
+function differentiate(form::EllipticalLinForm)
+    d = OffsetVector{EllipticalTerm}(undef, axes(form)[1])
+    for i in eachindex(form)
+        d[i] = differentiate(form[i])
+    end
+    return d
+end
+
+###############################################################################
+
+function add_term_series!(output::ComplexOffsetVector; 
+                            term::WeierstrassTerm, 
+                            point::RationalComplex, norm_r::Float64,
+                            power_shift::Int, conjugated::Bool,
+                            praecursor::EllipticPraecursor)
+    
+    ℘ = praecursor.℘
+    Δ = point - term.pole
+    if Δ == 0
+
+    else        
+        rΔ = term.norm_r / abs(Δ)
+        RΔ = norm_r / abs(Δ)
+        K = lastindex(output)
+        n = term.deriv
+        
+        if n == -1
+            RΔ_k = RΔ
+
+            for k in 1 : K
+                addend = term.num_factor * rΔ * RΔ_k * ℘[Δ, k-1] / k
+                
+                if !conjugated
+                    output[k+power_shift] += addend
+                else
+                    output[-k+power_shift] += conj(addend)
+                end
+                
+                RΔ_k *= RΔ
+            end
+
+        else # n >= 0
+            rΔ_n = rΔ^(n+2) / (n+1)
+            RΔ_k = 1.0
+            binom = 1.0
+            
+            for k in 0 : K
+                addend = term.num_factor * rΔ_n * binom * RΔ_k * ℘[Δ, k]
+                
+                if !conjugated
+                    output[k+power_shift] += addend
+                else
+                    output[-k+power_shift] += conj(addend)
+                end
+                
+                binom *= (n+k+1)/(k+1)
+                RΔ_k *= RΔ
+            end
+        end
+    end
+end
+
+###############################################################################
+
 #=
 using OffsetArrays
 
