@@ -20,13 +20,21 @@ struct Weierstrass <: EllipticFunction
     # θ-function data
     θ             ::  Theta
     cash          ::  Dict{RationalComplex, CashedVector{ComplexF64}}
+    laurent_series::  ComplexOffsetMatrix
     max_derivative ::Int
+end
+
+function differentiate!(series:ComplexOffsetVector)
+    for n in firstindex(series)+1 : lastindex(series)
+        series[n-1] = n * series[n]
+    end
+    series[end] = 0.0im
 end
 
 """
   WeierstrassData(; ω1::ComplexF64, ω3::ComplexF64)
 
-Construct WeierstrassData object from lattice generators ω1 and ω3
+Constructs WeierstrassData object from lattice generators ω1 and ω3
 """
 function Weierstrass(
         ω1::ComplexF64,
@@ -64,7 +72,45 @@ function Weierstrass(
 
     cash = Dict{RationalComplex, CashedVector{ComplexF64}}()
 
-    return Weierstrass(ω1, ω3, e1, g2, g3, η1, ℘_factor, σ_factor, θ, cash, max_derivative)
+    ##########
+
+    c = OffsetVector{ComplexF64}(undef, 2:max_derivative+2)
+    c[2] = g2/20.0
+    c[3] = g3/28.0
+    for n in 4:last(c)
+        c[n] = 0.0im
+        for m in 2:n-2
+            c[n] += c[m] * c[n-m]
+        end
+        c[n] *= 3/((2n+1)*(n-3))
+    end
+
+    #####
+
+    laurent_praecursor = OffsetVector{ComplexF64}(undef, 0:2*(max_derivative+2))
+    fill!(laurent_praecursor, 0.0im)
+    for n in 2 : max_derivative+2
+        laurent_praecursor[2n-2] = c[n]
+    end
+
+    ###
+
+    laurent_series = OffsetArray{ComplexF64, 2}(undef, -1:max_derivative, 0:max_derivative+2)
+    for k in 0:max_derivative
+        for n in 0 : max_derivative+2
+            laurent_series[k,n] = laurent_praecursor[n]
+        end
+        differentiate!(laurent_praecursor)
+    end
+    laurent_series[-1,0] = 0.0im
+    for n in 1 : max_derivative+2
+        laurent_series[-1,n] = laurent_series[0,n-1]/n
+    end
+
+    ##########
+
+    return Weierstrass(ω1, ω3, e1, g2, g3, η1, ℘_factor, σ_factor, θ, cash, 
+                        laurent_series, max_derivative)
 end
 
 function cash_wei_elder_derivs!(output::CashedVector{ComplexF64}, n_deriv::Int)

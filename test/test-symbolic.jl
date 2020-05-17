@@ -2,18 +2,18 @@ module TestSymbolic
 
 using Test, OffsetArrays
 #using VanFoFy.Symbolic: VarLinForm, variables, add!, add_conjugated!, mul!
-using VanFoFy.Symbolic: SymbolicSolution, FunctionalTerm
-using VanFoFy.Symbolic: SymbolicFunction, SymbolicWeierstrass, SymbolicQ, SymbolicZ, SymbolicConst
+using VanFoFy.Symbolic: EllipticalTerm
+using VanFoFy.Symbolic: WeierstrassTerm, QSpecialTerm, ZTerm, ConstTerm
 
 function test()
     @testset "SymbolicSolution" begin
-        ss = OffsetVector{FunctionalTerm}(undef, 10:20)
+        ss = OffsetVector{EllipticalTerm}(undef, 10:20)
 
-        ss[15] = FunctionalTerm{SymbolicWeierstrass}(0.0im, 1.0+0.0im, 1.0, 1)
-        @test ss[15] isa FunctionalTerm{SymbolicWeierstrass}
+        ss[15] = WeierstrassTerm(0.0im, 1.0+0.0im, 1.0, 1)
+        @test ss[15] isa WeierstrassTerm
 
-        ss[14] = FunctionalTerm{SymbolicQ}(0.0im, 1.0+0.0im, 1.0, 1)
-        @test ss[14] isa FunctionalTerm{SymbolicQ}
+        ss[14] = QSpecialTerm(0.0im, 1.0+0.0im, 1.0, 1)
+        @test ss[14] isa QSpecialTerm
     end
     #=
     @testset "VarLinForm" begin

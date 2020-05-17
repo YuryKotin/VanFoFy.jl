@@ -1,5 +1,5 @@
 using Test, OffsetArrays
-using VanFoFy.Ellipticals: Theta, theta
+using VanFoFy.Ellipticals: Theta, theta, theta12
 
 @testset "θ-functions" begin
     ω1 = complex(1.0)
@@ -66,7 +66,7 @@ using VanFoFy.Ellipticals: Theta, theta
 
     #####
 
-    th1, th2, dth1, dth2 = theta(θ, z)
+    th1, th2, dth1, dth2 = theta12(θ, z)
 
     @test th1  ≈ theta(θ, th_k=1, d_n=0, z=z) atol=tol_check
     @test th2  ≈ theta(θ, th_k=2, d_n=0, z=z) atol=tol_check

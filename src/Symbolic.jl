@@ -69,17 +69,73 @@ end
 
 ###############################################################################
 
-function add_term_series!(output::ComplexOffsetVector; 
-                            term::WeierstrassTerm, 
-                            point::RationalComplex, norm_r::Float64,
-                            power_shift::Int, conjugated::Bool,
-                            praecursor::EllipticPraecursor)
+struct BoundedVector{T <: Number}
+    vector ::OffsetArray{T, 1, Array{T, 1}}
+end
+
+function BoundedVector{T}(indices::UnitRange{Int}) where T <: Number
+    vector = OffsetVector{T}(undef, indices)
+    BoundedVector{T}(vector)
+end
+
+function Base.getindex(bv::BoundedVector{T}, key::Int) where T
+    if key in axes(bv.vector, 1)
+        @inbounds return bv.vector[key]
+    else
+        return zero(T)
+    end
+end
+
+function Base.setindex!(bv::BoundedVector{T}, val::T, key::Int) where T
+    if key in axes(bv.vector, 1)
+        @inbounds bv.vector[key] = val
+    end
+end
+
+lastindex(bv::BoundedVector) = lastindex(bv.vector)
+
+###############################################################################
+
+const CoeffsContainer = BoundedVector{ComplexF64}
+
+function add_term_series!(output       ::CoeffsContainer; 
+                            term       ::WeierstrassTerm, 
+                            point      ::RationalComplex, 
+                            norm_r     ::Float64,
+                            power_shift::Int = 0, 
+                            conjugated ::Bool = false,
+                            praecursor ::EllipticPraecursor)
     
     ℘ = praecursor.℘
     Δ = point - term.pole
     if Δ == 0
 
+        r = term.norm_r
+        R = norm_r
+        n = term.deriv
+        addend = n % 2 == 0 ? 1.0+0.0im : -1.0+0.0im
+        addend *= (r / R)^(n+2)
+        if !conjugated
+            output[-(n+2)+power_shift] += addend
+        else
+            output[n+2+power_shift] += conj(addend)
+        end
+        
+        rn = r^(n+2)
+        Rk = 1.0
+        K = lastindex(output)
+        for k in 0 : K
+            addend = term.num_factor * rn * Rk * ℘.laurent_series[n,k]
+            if !conjugated
+                output[k+power_shift] += addend
+            else
+                output[-k+power_shift] += conj(addend)
+            end
+            Rk *= R
+        end
+
     else        
+        
         rΔ = term.norm_r / abs(Δ)
         RΔ = norm_r / abs(Δ)
         K = lastindex(output)

@@ -2,6 +2,8 @@ module TestWeierstrass
 
 using Test, OffsetArrays
 using VanFoFy.Ellipticals: Weierstrass, raw_complex
+using VanFoFy.Symbolic: WeierstrassTerm, BoundedVector, add_term_series!
+using VanFoFy.Ellipticals: EllipticPraecursor, QSpecial
 
 function test()
     ω1 = complex(1.0)
@@ -40,6 +42,10 @@ function test()
         for n in 10:-1:-1
             @test wei[rz, n] ≈ ref_array[n]*(abs_z^(n+2)) atol=1e-10
         end
+    end
+
+    @testset "Weierstrass series expansions" begin
+
     end
 end
 

@@ -2,7 +2,7 @@ module Ellipticals
 
 using OffsetArrays
 
-using ..TypeSynonyms: RationalComplex
+using ..TypeSynonyms: RationalComplex, ComplexOffsetMatrix, ComplexOffsetVector
 using ..Input: FiberData, CellData
 
 mutable struct CashedVector{N <: Number}
