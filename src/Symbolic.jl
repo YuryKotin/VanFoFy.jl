@@ -1,7 +1,7 @@
 module Symbolic
 
 using ..TypeSynonyms: RationalComplex, ComplexOffsetVector
-using ..Ellipticals: EllipticPraecursor
+using ..Ellipticals: EllipticPraecursor, getindex, raw_complex
 
 using OffsetArrays
 
@@ -9,14 +9,14 @@ abstract type EllipticalTerm end
 
 struct WeierstrassTerm <: EllipticalTerm
     deriv      ::Int
-    pole      ::ComplexF64
+    pole       ::RationalComplex
     num_factor ::ComplexF64
     norm_r     ::Float64
 end
 
 struct QSpecialTerm <: EllipticalTerm
     deriv      ::Int
-    pole      ::ComplexF64
+    pole       ::RationalComplex
     num_factor ::ComplexF64
     norm_r     ::Float64
 end
@@ -92,7 +92,9 @@ function Base.setindex!(bv::BoundedVector{T}, val::T, key::Int) where T
     end
 end
 
-lastindex(bv::BoundedVector) = lastindex(bv.vector)
+lastindex(bv::BoundedVector) = Base.lastindex(bv.vector)
+
+fill!(bv::BoundedVector{T}, val::T) where T = Base.fill!(bv.vector, val)
 
 ###############################################################################
 
@@ -113,6 +115,7 @@ function add_term_series!(output       ::CoeffsContainer;
         r = term.norm_r
         R = norm_r
         n = term.deriv
+        
         addend = n % 2 == 0 ? 1.0+0.0im : -1.0+0.0im
         addend *= (r / R)^(n+2)
         if !conjugated
@@ -135,44 +138,32 @@ function add_term_series!(output       ::CoeffsContainer;
         end
 
     else        
-        
-        rΔ = term.norm_r / abs(Δ)
-        RΔ = norm_r / abs(Δ)
+        z = raw_complex(℘, Δ)
+        rΔ = term.norm_r / abs(z)
+        RΔ = norm_r / abs(z)
         K = lastindex(output)
         n = term.deriv
         
-        if n == -1
-            RΔ_k = RΔ
-
-            for k in 1 : K
-                addend = term.num_factor * rΔ * RΔ_k * ℘[Δ, k-1] / k
-                
-                if !conjugated
-                    output[k+power_shift] += addend
-                else
-                    output[-k+power_shift] += conj(addend)
-                end
-                
-                RΔ_k *= RΔ
+        rΔ_n = (n == -1 ? rΔ : rΔ^(n+2) / (n+1))
+        RΔ_k = 1.0
+        binom = 1.0
+        
+        for k in 0 : K
+            addend = term.num_factor * rΔ_n * RΔ_k * ℘[Δ, n+k]
+            if n == -1
+                addend /= (k == 0 ? 1 : k)
+            else
+                addend *= binom
             end
 
-        else # n >= 0
-            rΔ_n = rΔ^(n+2) / (n+1)
-            RΔ_k = 1.0
-            binom = 1.0
+            if !conjugated
+                output[k+power_shift] += addend
+            else
+                output[-k+power_shift] += conj(addend)
+            end
             
-            for k in 0 : K
-                addend = term.num_factor * rΔ_n * binom * RΔ_k * ℘[Δ, k]
-                
-                if !conjugated
-                    output[k+power_shift] += addend
-                else
-                    output[-k+power_shift] += conj(addend)
-                end
-                
-                binom *= (n+k+1)/(k+1)
-                RΔ_k *= RΔ
-            end
+            binom *= (n+k+1)/(k+1)
+            RΔ_k *= RΔ
         end
     end
 end

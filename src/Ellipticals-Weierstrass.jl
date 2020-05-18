@@ -24,7 +24,7 @@ struct Weierstrass <: EllipticFunction
     max_derivative ::Int
 end
 
-function differentiate!(series:ComplexOffsetVector)
+function differentiate!(series::ComplexOffsetVector)
     for n in firstindex(series)+1 : lastindex(series)
         series[n-1] = n * series[n]
     end
@@ -77,7 +77,7 @@ function Weierstrass(
     c = OffsetVector{ComplexF64}(undef, 2:max_derivative+2)
     c[2] = g2/20.0
     c[3] = g3/28.0
-    for n in 4:last(c)
+    for n in 4:lastindex(c)
         c[n] = 0.0im
         for m in 2:n-2
             c[n] += c[m] * c[n-m]
