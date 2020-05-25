@@ -51,6 +51,15 @@ struct EllipticPraecursor
     Q ::QSpecial
 end
 
+function EllipticPraecursor(
+                            ω1::ComplexF64,
+                            ω3::ComplexF64,
+                            max_derivative ::Int)
+
+    ℘ = Weierstrass(ω1, ω3, max_derivative)
+    Q = QSpecial(℘)
+    EllipticPraecursor(℘, Q)
+end
 #=
 struct Elliptical
     ℘ ::Weierstrass

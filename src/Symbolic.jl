@@ -1,7 +1,7 @@
 module Symbolic
 
 using ..TypeSynonyms: RationalComplex, ComplexOffsetVector
-using ..Ellipticals: EllipticPraecursor, getindex, raw_complex
+using ..Ellipticals: EllipticPraecursor, getindex, raw_complex, Weierstrass, QSpecial
 
 using OffsetArrays
 
@@ -43,7 +43,7 @@ function differentiate(term::WeierstrassTerm)
 end
 
 function differentiate(term::QSpecialTerm)
-    # (r^{n+2}/(n+1)! Q^{(n)}(z))' = [(n+2)/r] [r^(n+3)/(n+2)! Q^{(n+1)}(z)]
+    # (r^{n+3}/(n+1)! Q^{(n)}(z))' = [(n+2)/r] [r^(n+4)/(n+2)! Q^{(n+1)}(z)]
     deriv = term.deriv + 1
     pole = term.pole
     num_factor = term.num_factor * (term.deriv + 2) / term.norm_r
@@ -92,16 +92,16 @@ function Base.setindex!(bv::BoundedVector{T}, val::T, key::Int) where T
     end
 end
 
-lastindex(bv::BoundedVector) = Base.lastindex(bv.vector)
+Base.lastindex(bv::BoundedVector) = Base.lastindex(bv.vector)
 
-fill!(bv::BoundedVector{T}, val::T) where T = Base.fill!(bv.vector, val)
+Base.fill!(bv::BoundedVector{T}, val::T) where T = Base.fill!(bv.vector, val)
 
 ###############################################################################
 
 const CoeffsContainer = BoundedVector{ComplexF64}
 
-function add_term_series!(output       ::CoeffsContainer; 
-                            term       ::WeierstrassTerm, 
+function add_term_series!(output       ::CoeffsContainer, 
+                            term       ::WeierstrassTerm; 
                             point      ::RationalComplex, 
                             norm_r     ::Float64,
                             power_shift::Int = 0, 
@@ -128,7 +128,7 @@ function add_term_series!(output       ::CoeffsContainer;
         Rk = 1.0
         K = lastindex(output)
         for k in 0 : K
-            addend = term.num_factor * rn * Rk * ℘.laurent_series[n,k]
+            addend = term.num_factor * rn * Rk * ℘.derivs_series[n,k]
             if !conjugated
                 output[k+power_shift] += addend
             else
@@ -163,6 +163,58 @@ function add_term_series!(output       ::CoeffsContainer;
             end
             
             binom *= (n+k+1)/(k+1)
+            RΔ_k *= RΔ
+        end
+    end
+end
+
+function add_term_series!(output::CoeffsContainer, 
+                        term       ::QSpecialTerm; 
+                        point      ::RationalComplex, 
+                        norm_r     ::Float64,
+                        power_shift::Int = 0, 
+                        conjugated ::Bool = false,
+                        praecursor ::EllipticPraecursor)
+    Q = praecursor.Q
+    ℘ = praecursor.℘
+    Δ = point - term.pole
+
+    r = term.norm_r
+    R = norm_r
+    K = lastindex(output)
+    n = term.deriv
+    if Δ == 0
+        rn = r^(n+3)
+        Rk = 1.0
+        for k in 0 : K
+            addend = term.num_factor * rn * Rk * Q.derivs_series[n,k]
+            if !conjugated
+                output[k+power_shift] += addend
+            else
+                output[-k+power_shift] += conj(addend)
+            end
+            Rk *= R
+        end
+    else
+        z = raw_complex(Q.℘, Δ)
+        rΔ = r / abs(z)
+        RΔ = R / abs(z)
+
+        rΔ_n = rΔ^(n+3)
+        RΔ_k = 1.0
+        binom = 1.0
+        
+        for k in 0 : K
+            addend = term.num_factor * rΔ_n * RΔ_k * Q[Δ, n+k]
+            addend *= binom
+
+            if !conjugated
+                output[k+power_shift] += addend
+            else
+                output[-k+power_shift] += conj(addend)
+            end
+            
+            binom *= (n+k+2)/(k+1)
             RΔ_k *= RΔ
         end
     end

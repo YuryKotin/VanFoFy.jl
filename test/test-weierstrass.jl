@@ -2,7 +2,7 @@ module TestWeierstrass
 
 using Test, OffsetArrays
 using VanFoFy.Ellipticals: Weierstrass, raw_complex
-using VanFoFy.Symbolic: WeierstrassTerm, BoundedVector, add_term_series!, fill!
+using VanFoFy.Symbolic: WeierstrassTerm, BoundedVector, add_term_series!#, fill!
 using VanFoFy.Ellipticals: EllipticPraecursor, QSpecial
 
 function test()
@@ -10,7 +10,7 @@ function test()
     ω3 = exp(1im)
     wei = Weierstrass(ω1, ω3, 20)
 
-    Q = QSpecial(wei, 19)
+    Q = QSpecial(wei)
     el_praecursor = EllipticPraecursor(wei, Q)
 
     rz = complex(3//10, 7//10)
@@ -41,10 +41,11 @@ function test()
                 0.162780226883512 + 3.098964550714613im,
                 -2.479278381517072 - 2.856788007534111im],
                 -2:10)
-        for n in 1:10  ref_array[n] *= n+1  end
+        for n in 1:10  ref_array[n] *= (n+1)  end
+        for n in -2:10  ref_array[n] *= (abs_z^(n+2))  end
 
         for n in 10:-1:-1
-            @test wei[rz, n] ≈ ref_array[n]*(abs_z^(n+2)) atol=1e-10
+            @test wei[rz, n] ≈ ref_array[n] atol=1e-10
         end
     end
 
@@ -57,7 +58,7 @@ function test()
 
         term = WeierstrassTerm(0, 0, 1.0+0.0im, r)
 
-        add_term_series!(coeffs, term=term, point=rz, norm_r=R, praecursor=el_praecursor)
+        add_term_series!(coeffs, term, point=rz, norm_r=R, praecursor=el_praecursor)
 
         ref_series_0 = OffsetVector(
             [  -0.007062266411672984100 - 0.136302147894561409558im, 
@@ -79,7 +80,7 @@ function test()
 
         fill!(coeffs, 0.0im)
         term_4 = WeierstrassTerm(4, 0, 1.0+0.0im, r)
-        add_term_series!(coeffs, term=term_4, point=rz, norm_r=R, praecursor=el_praecursor)
+        add_term_series!(coeffs, term_4, point=rz, norm_r=R, praecursor=el_praecursor)
 
         ref_series_4 = OffsetVector(
             [  -0.0009214092844579307214 + 0.0019594936186668951428im, 
@@ -102,7 +103,7 @@ function test()
 
         fill!(coeffs, 0.0im)
         term_m1 = WeierstrassTerm(-1, 0, 1.0+0.0im, r)
-        add_term_series!(coeffs, term=term_m1, point=rz, norm_r=R, praecursor=el_praecursor)
+        add_term_series!(coeffs, term_m1, point=rz, norm_r=R, praecursor=el_praecursor)
 
         ref_series_m1 = OffsetVector(
             [ -0.28578753432989584260 + 0.23353364293010461794im, 
@@ -134,7 +135,7 @@ function test()
 
         term = WeierstrassTerm(0, 0, 1.0+0.0im, r)
 
-        add_term_series!(coeffs, term=term, point=0//1im, norm_r=R, praecursor=el_praecursor)
+        add_term_series!(coeffs, term, point=0//1im, norm_r=R, praecursor=el_praecursor)
 
         ref_series_0 = OffsetVector(
             [   0.0im, 
@@ -164,7 +165,7 @@ function test()
 
     term1 = WeierstrassTerm(0, 0, 1.0+0.0im, r)
 
-    add_term_series!(coeffs, term=term1, point=0//1im, norm_r=R, praecursor=el_praecursor)
+    add_term_series!(coeffs, term1, point=0//1im, norm_r=R, praecursor=el_praecursor)
 
     ref_series_1 = OffsetVector(
         [  0.0im, 
@@ -187,20 +188,20 @@ function test()
 
     fill!(coeffs, 0.0im)
     term_4 = WeierstrassTerm(4, 0, 1.0+0.0im, r)
-    add_term_series!(coeffs, term=term_4, point=rz, norm_r=R, praecursor=el_praecursor)
+    add_term_series!(coeffs, term_4, point=0//1im, norm_r=R, praecursor=el_praecursor)
 
     ref_series_4 = OffsetVector(
-        [  -0.0009214092844579307214 + 0.0019594936186668951428im, 
-        -0.0028722063577332934865 - 0.0072667501875549505089im, 
-        0.0073746293530483368259 + 0.0058918916964707662709im, 
-        -0.0122737733187416580422 + 0.0029531409902620719271im, 
-        0.0086140079571586352508 - 0.0090019761692170623124im, 
-        0.0005334137224169422905 + 0.0101549816478491532201im, 
-        -0.0058870680302061141609 - 0.0067834679129252263563im, 
-        0.0062260580012766311708 + 0.0008464160569543714577im, 
-        -0.0038832757904932869823 + 0.0026856895350562824849im, 
-        0.0008983187116395736048 - 0.0030265867901243404675im, 
-        0.0009320447700863913930 + 0.0018708927349205316335im],
+        [  0.000133142794497780546890 + 0.000018979045090907650627im, 
+        0.0im, 
+        -2.1168551975561177993e-6 + 2.4509399993828030394e-6im, 
+        0.0im, 
+        -2.2041530051441401216e-6 - 7.4511723099532586561e-6im, 
+        0.0im, 
+        3.9873539256895752173e-6 + 1.1603446796179551156e-6im, 
+        0.0im, 
+        -2.7859793973179674329e-8 + 2.4278361257042633198e-8im, 
+        0.0im, 
+        -2.789038286510059390e-9 - 1.8964655585830648380e-8im],
         0:10
     )
 
@@ -210,20 +211,20 @@ function test()
 
     fill!(coeffs, 0.0im)
     term_m1 = WeierstrassTerm(-1, 0, 1.0+0.0im, r)
-    add_term_series!(coeffs, term=term_m1, point=rz, norm_r=R, praecursor=el_praecursor)
+    add_term_series!(coeffs, term_m1, point=0//1im, norm_r=R, praecursor=el_praecursor)
 
     ref_series_m1 = OffsetVector(
-        [ -0.28578753432989584260 + 0.23353364293010461794im, 
-        -0.00839837086793544102 - 0.16208904073947844049im, 
-        0.016405429552186805847 + 0.083493189978394471984im, 
-        -0.029394408830957823725 + 0.007094488639226743075im, 
-        0.015929845847864793768 - 0.003996088459200494540im, 
-        -0.0021913277886830692318 + 0.0046601362616592572480im, 
-        -0.0011384636036517886432 - 0.0028803399111928733138im, 
-        0.00083517149865965556368 + 0.00066725251975516025778im, 
-        -0.00052124851803154613385 + 0.00012541541421184836482im, 
-        0.00016258837316058080040 - 0.00016991122690651651859im, 
-        5.034060206388960567*10^-6 + 0.000095837033922590211658im],
+        [ 0, 
+        0, 
+        0, 
+        -0.00035302243793163717075 - 0.00077136809950639057248im, 
+        0, 
+        0.00031664485084665635424 + 0.00004513662887046130333im, 
+        0, 
+        -2.3973233679298599188e-7 + 2.7756720160631695794e-7im, 
+        0, 
+        -4.160312517538011280e-8 - 1.4063998896212731118e-7im, 
+        0],
         0:10
     )
 

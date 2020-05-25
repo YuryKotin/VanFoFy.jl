@@ -7,21 +7,22 @@
 Set of Weierstrass elliptic functions parameters for computational issues
 """
 struct Weierstrass <: EllipticFunction
-    ω1            ::  ComplexF64
-    ω3            ::  ComplexF64
-    e1            ::  ComplexF64
-    g2            ::  ComplexF64
-    g3            ::  ComplexF64
-    η1            ::  ComplexF64
+    ω1                ::  ComplexF64
+    ω3                ::  ComplexF64
+    e1                ::  ComplexF64
+    g2                ::  ComplexF64
+    g3                ::  ComplexF64
+    η1                ::  ComplexF64
     # (\\frac{π θ_3(0) θ_4(0)}{2ω_1})^2
     # coefficient in ℘-function evaluation
-    ℘_factor      ::  ComplexF64
-    σ_factor      ::  ComplexF64
+    ℘_factor          ::  ComplexF64
+    σ_factor          ::  ComplexF64
     # θ-function data
-    θ             ::  Theta
-    cash          ::  Dict{RationalComplex, CashedVector{ComplexF64}}
-    laurent_series::  ComplexOffsetMatrix
-    max_derivative ::Int
+    θ                 ::  Theta
+    cash              ::  Dict{RationalComplex, CashedVector{ComplexF64}}
+    ℘_series ::ComplexOffsetVector
+    derivs_series    ::ComplexOffsetMatrix
+    max_derivative    ::Int
 end
 
 function differentiate!(series::ComplexOffsetVector)
@@ -92,25 +93,28 @@ function Weierstrass(
     for n in 2 : max_derivative+2
         laurent_praecursor[2n-2] = c[n]
     end
+    ℘_series = deepcopy(laurent_praecursor)
 
     ###
 
-    laurent_series = OffsetArray{ComplexF64, 2}(undef, -1:max_derivative, 0:max_derivative+2)
+    derivs_series = OffsetArray{ComplexF64, 2}(undef, -1:max_derivative, 0:max_derivative+2)
+    fact = 1.0
     for k in 0:max_derivative
         for n in 0 : max_derivative+2
-            laurent_series[k,n] = laurent_praecursor[n]
+            derivs_series[k,n] = laurent_praecursor[n] / fact
         end
         differentiate!(laurent_praecursor)
+        fact *= k+2
     end
-    laurent_series[-1,0] = 0.0im
+    derivs_series[-1,0] = 0.0im
     for n in 1 : max_derivative+2
-        laurent_series[-1,n] = laurent_series[0,n-1]/n
+        derivs_series[-1,n] = derivs_series[0,n-1]/n
     end
 
     ##########
 
     return Weierstrass(ω1, ω3, e1, g2, g3, η1, ℘_factor, σ_factor, θ, cash, 
-                        laurent_series, max_derivative)
+                        ℘_series, derivs_series, max_derivative)
 end
 
 function cash_wei_elder_derivs!(output::CashedVector{ComplexF64}, n_deriv::Int)
@@ -162,7 +166,6 @@ function cash_wei_first_derivs!(w::Weierstrass, rz::RationalComplex, output::Cas
     output[2] = ℘_pp / 2.0    # /2!
 end
 
-
 function Base.getindex(w::Weierstrass, rz::RationalComplex, n_deriv::Int)
     if rz == 0
         error("Can't compute Weierstrass elliptic functions at zero point")
@@ -175,7 +178,8 @@ function Base.getindex(w::Weierstrass, rz::RationalComplex, n_deriv::Int)
         vector = w.cash[-rz]
         sign = (n_deriv % 2 == 0) ? 1.0 : -1.0
     else
-        vector = CashedVector{ComplexF64}(-1:w.max_derivative)
+        vector = CashedVector{ComplexF64}(-1:2*w.max_derivative+2)
+        w.cash[rz] = vector
         cash_wei_first_derivs!(w, rz, vector)
         sign = 1.0
     end
