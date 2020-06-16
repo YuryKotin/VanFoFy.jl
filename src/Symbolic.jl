@@ -117,7 +117,7 @@ function add_term_series!(output       ::CoeffsContainer,
         n = term.deriv
         
         addend = n % 2 == 0 ? 1.0+0.0im : -1.0+0.0im
-        addend *= (r / R)^(n+2)
+        addend *= (r / R)^(n+2) * term.num_factor
         if !conjugated
             output[-(n+2)+power_shift] += addend
         else
@@ -168,6 +168,8 @@ function add_term_series!(output       ::CoeffsContainer,
     end
 end
 
+#######################################
+
 function add_term_series!(output::CoeffsContainer, 
                         term       ::QSpecialTerm; 
                         point      ::RationalComplex, 
@@ -217,6 +219,41 @@ function add_term_series!(output::CoeffsContainer,
             binom *= (n+k+2)/(k+1)
             RΔ_k *= RΔ
         end
+    end
+end
+
+#######################################
+
+function add_term_series!(output::CoeffsContainer, 
+                        term       ::ZTerm; 
+                        point      ::RationalComplex, 
+                        norm_r     ::Float64,
+                        power_shift::Int = 0, 
+                        conjugated ::Bool = false,
+                        praecursor ::EllipticPraecursor)
+    z = raw_complex(praecursor.℘, point)
+    if conjugated
+        output[0] += conj(z * term.num_factor)
+        output[1] += (abs(z)^2 / norm_r) * conj(term.num_factor)
+    else
+        output[0] += z * term.num_factor
+        output[1] += norm_r * term.num_factor
+    end
+end
+
+#######################################
+
+function add_term_series!(output::CoeffsContainer, 
+                        term       ::ConstTerm; 
+                        point      ::RationalComplex, 
+                        norm_r     ::Float64,
+                        power_shift::Int = 0, 
+                        conjugated ::Bool = false,
+                        praecursor ::EllipticPraecursor)
+    if conjugated
+        output[0] += conj(term.num_factor)
+    else
+        output[0] += term.num_factor
     end
 end
 

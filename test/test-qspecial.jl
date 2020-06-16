@@ -98,9 +98,9 @@ function test()
     @testset "QSpecial add_term_series" begin
         r = 0.37 * abs(z)
         R = 0.44 * abs(z)
-        n = 3
+        derivative = 3
 
-        term = QSpecialTerm(n, 0//1im, 1.0+0.0im, r)
+        term = QSpecialTerm(derivative, 0//1im, 1.0+0.0im, r)
 
         coeffs = BoundedVector{ComplexF64}(-10:10)
         fill!(coeffs, 0.0im)
@@ -129,9 +129,9 @@ function test()
     @testset "QSpecial add_term_series at pole" begin
         r = 0.37 * abs(z)
         R = 0.44 * abs(z)
-        n = 3
+        derivative = 3
 
-        term = QSpecialTerm(n, 0//1im, 1.0+0.0im, r)
+        term = QSpecialTerm(derivative, 0//1im, 1.0+0.0im, r)
 
         coeffs = BoundedVector{ComplexF64}(-10:10)
         fill!(coeffs, 0.0im)

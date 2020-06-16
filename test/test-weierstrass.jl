@@ -128,32 +128,32 @@ function test()
     @testset "Weierstrass series expansions at pole" begin
 
     r = 1.0
-        R = 1.0
-    
-        coeffs = BoundedVector{ComplexF64}(-10:10)
-        fill!(coeffs, 0.0im)
+    R = 1.0
 
-        term = WeierstrassTerm(0, 0, 1.0+0.0im, r)
+    coeffs = BoundedVector{ComplexF64}(-10:10)
+    fill!(coeffs, 0.0im)
 
-        add_term_series!(coeffs, term, point=0//1im, norm_r=R, praecursor=el_praecursor)
+    term = WeierstrassTerm(0, 0, 1.0+0.0im, r)
 
-        ref_series_0 = OffsetVector(
-            [   0.0im, 
-                0.0im, 
-                -0.051605423958805651807 - 0.112759908510501127843im, 
-                0.0im, 
-                0.49382677892857757789 + 0.07039330021377456146im, 
-                0.0im, 
-                -0.0033505590617761707625 + 0.0038793485894936988143im, 
-                0.0im, 
-                -0.004785435871899049176 - 0.016177237776385416715im, 
-                0.0im, 
-                0.018471565761370376530 + 0.005375340001129344245im],
-            0:10
-        )
-        for n in 0:10
-            @test coeffs[n] ≈ ref_series_0[n]
-        end
+    add_term_series!(coeffs, term, point=0//1im, norm_r=R, praecursor=el_praecursor)
+
+    ref_series_0 = OffsetVector(
+        [   0.0im, 
+            0.0im, 
+            -0.051605423958805651807 - 0.112759908510501127843im, 
+            0.0im, 
+            0.49382677892857757789 + 0.07039330021377456146im, 
+            0.0im, 
+            -0.0033505590617761707625 + 0.0038793485894936988143im, 
+            0.0im, 
+            -0.004785435871899049176 - 0.016177237776385416715im, 
+            0.0im, 
+            0.018471565761370376530 + 0.005375340001129344245im],
+        0:10
+    )
+    for n in 0:10
+        @test coeffs[n] ≈ ref_series_0[n]
+    end
 
     #######################################################################
 
