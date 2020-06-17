@@ -102,7 +102,8 @@ const CoeffsContainer = BoundedVector{ComplexF64}
 
 function add_term_series!(output       ::CoeffsContainer, 
                             term       ::WeierstrassTerm; 
-                            point      ::RationalComplex, 
+                            point      ::RationalComplex,
+                            factor     ::ComplexF64 = 1.0+0.0im, 
                             norm_r     ::Float64,
                             power_shift::Int = 0, 
                             conjugated ::Bool = false,
@@ -119,9 +120,9 @@ function add_term_series!(output       ::CoeffsContainer,
         addend = n % 2 == 0 ? 1.0+0.0im : -1.0+0.0im
         addend *= (r / R)^(n+2) * term.num_factor
         if !conjugated
-            output[-(n+2)+power_shift] += addend
+            output[-(n+2)+power_shift] += addend * factor
         else
-            output[n+2+power_shift] += conj(addend)
+            output[n+2+power_shift] += conj(addend) * factor
         end
         
         rn = r^(n+2)
@@ -130,9 +131,9 @@ function add_term_series!(output       ::CoeffsContainer,
         for k in 0 : K
             addend = term.num_factor * rn * Rk * ℘.derivs_series[n,k]
             if !conjugated
-                output[k+power_shift] += addend
+                output[k+power_shift] += addend * factor
             else
-                output[-k+power_shift] += conj(addend)
+                output[-k+power_shift] += conj(addend) * factor
             end
             Rk *= R
         end
@@ -157,9 +158,9 @@ function add_term_series!(output       ::CoeffsContainer,
             end
 
             if !conjugated
-                output[k+power_shift] += addend
+                output[k+power_shift] += addend * factor
             else
-                output[-k+power_shift] += conj(addend)
+                output[-k+power_shift] += conj(addend) * factor
             end
             
             binom *= (n+k+1)/(k+1)
@@ -173,6 +174,7 @@ end
 function add_term_series!(output::CoeffsContainer, 
                         term       ::QSpecialTerm; 
                         point      ::RationalComplex, 
+                        factor     ::ComplexF64 = 1.0+0.0im, 
                         norm_r     ::Float64,
                         power_shift::Int = 0, 
                         conjugated ::Bool = false,
@@ -191,9 +193,9 @@ function add_term_series!(output::CoeffsContainer,
         for k in 0 : K
             addend = term.num_factor * rn * Rk * Q.derivs_series[n,k]
             if !conjugated
-                output[k+power_shift] += addend
+                output[k+power_shift] += addend * factor
             else
-                output[-k+power_shift] += conj(addend)
+                output[-k+power_shift] += conj(addend) * factor
             end
             Rk *= R
         end
@@ -211,9 +213,9 @@ function add_term_series!(output::CoeffsContainer,
             addend *= binom
 
             if !conjugated
-                output[k+power_shift] += addend
+                output[k+power_shift] += addend * factor
             else
-                output[-k+power_shift] += conj(addend)
+                output[-k+power_shift] += conj(addend) * factor
             end
             
             binom *= (n+k+2)/(k+1)
@@ -227,17 +229,18 @@ end
 function add_term_series!(output::CoeffsContainer, 
                         term       ::ZTerm; 
                         point      ::RationalComplex, 
+                        factor     ::ComplexF64 = 1.0+0.0im, 
                         norm_r     ::Float64,
                         power_shift::Int = 0, 
                         conjugated ::Bool = false,
                         praecursor ::EllipticPraecursor)
     z = raw_complex(praecursor.℘, point)
     if conjugated
-        output[0] += conj(z * term.num_factor)
-        output[1] += (abs(z)^2 / norm_r) * conj(term.num_factor)
+        output[0+power_shift] += conj(z * term.num_factor) * factor
+        output[1+power_shift] += (abs(z)^2 / norm_r) * conj(term.num_factor) * factor
     else
-        output[0] += z * term.num_factor
-        output[1] += norm_r * term.num_factor
+        output[0+power_shift] += z * term.num_factor * factor
+        output[1+power_shift] += norm_r * term.num_factor * factor
     end
 end
 
@@ -246,14 +249,15 @@ end
 function add_term_series!(output::CoeffsContainer, 
                         term       ::ConstTerm; 
                         point      ::RationalComplex, 
+                        factor     ::ComplexF64 = 1.0+0.0im, 
                         norm_r     ::Float64,
                         power_shift::Int = 0, 
                         conjugated ::Bool = false,
                         praecursor ::EllipticPraecursor)
     if conjugated
-        output[0] += conj(term.num_factor)
+        output[0+power_shift] += conj(term.num_factor) * factor
     else
-        output[0] += term.num_factor
+        output[0+power_shift] += term.num_factor * factor
     end
 end
 
