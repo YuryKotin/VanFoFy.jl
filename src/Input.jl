@@ -1,6 +1,6 @@
 module Input
 
-using ..TypeSynonyms: RationalComplex
+using ..Types: RationalComplex
 
 struct FiberData
     E        :: Vector{Float64}

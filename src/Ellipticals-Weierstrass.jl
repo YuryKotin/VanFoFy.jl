@@ -2,7 +2,6 @@
 ##### Weierstrass elliptic functions
 ###############################################################################
 
-
 """
 Set of Weierstrass elliptic functions parameters for computational issues
 """

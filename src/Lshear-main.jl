@@ -1,6 +1,6 @@
 module LongitudinalShearCase
 
-using ..TypeSynonyms
+using ..Types
 using ..Symbolic
 
 include("Lshear-fiber.jl")

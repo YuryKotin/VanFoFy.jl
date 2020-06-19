@@ -1,22 +1,20 @@
 module PlaneProblems
-#=
+
 using ..Input: CellData
-using ..TypeSynonyms
-using ..Symbolic: NormedPolynomial, add!, z_conj_diff, re_conjugate!
-
-
-using ..General
+using ..Types
+using ..Symbolic: NormedPolynomial, add!, z_conj_diff
+using ..General: ProblemType, Fiber
 
 abstract type PlaneProblem <: ProblemType end
 
 struct PlaneLayer
-    E       ::Float
-    ν       ::Float
-    r_inner ::Float
-    r_outer ::Float
-    ϕ       ::NormedPolynomial{Complex{Float}, Float}
-    z_bar_Φ ::NormedPolynomial{Complex{Float}, Float}
-    bar_ψ   ::NormedPolynomial{Complex{Float}, Float}
+    E       ::Float64
+    ν       ::Float64
+    r_inner ::Float64
+    r_outer ::Float64
+    ϕ       ::NormedPolynomial
+    z_bar_Φ ::NormedPolynomial
+    bar_ψ   ::NormedPolynomial
 end
 
 function couple!(dest::PlaneLayer, source::PlaneLayer) 
@@ -42,16 +40,13 @@ function couple!(dest::PlaneLayer, source::PlaneLayer)
     add!(dest.ϕ, source.z_bar_Φ, (1-G2/G1)   /(1+κ2))
     add!(dest.ϕ, source.bar_ψ,   (1-G2/G1)   /(1+κ2))
 
-    dest.z_bar_Φ = z_conj_diff(dest.ϕ, dest.r_inner)
+    dest.z_bar_Φ = z_conj_diff(dest.ϕ, dest.r_inner, 1.0)
 
-    add!(dest.bar_ψ, source.ϕ)
-    add!(dest.bar_ψ, source.z_bar_Φ)
-    add!(dest.bar_ψ, source.bar_ψ)
-    add!(dest.bar_ψ, dest.ϕ, -1)
-    add!(dest.bar_ψ, dest.z_bar_Φ, -1)
-
-    re_conjugate!(dest.bar_ψ,   dest.r_inner, dest.r_outer)
-    re_conjugate!(dest.z_bar_Φ, dest.r_inner, dest.r_outer)
+    add!(dest.bar_ψ, source.ϕ,       +1.0)
+    add!(dest.bar_ψ, source.z_bar_Φ, +1.0)
+    add!(dest.bar_ψ, source.bar_ψ,   +1.0)
+    add!(dest.bar_ψ, dest.ϕ,         -1.0)
+    add!(dest.bar_ψ, dest.z_bar_Φ,   -1.0)
 end
 
 function displacements(layer::PlaneLayer)
@@ -60,7 +55,7 @@ function displacements(layer::PlaneLayer)
     G = E/(2*(1+ν))
     κ = 3 - 4*ν
     
-    displ = NormedPolynomial{Complex{Float}, Float}()
+    displ = similar(layer.ϕ)
     add!(displ, layer.ϕ,        κ/(2G))
     add!(displ, layer.z_bar_Φ, -1/(2G))
     add!(displ, layer.bar_ψ,   -1/(2G))
@@ -69,13 +64,13 @@ function displacements(layer::PlaneLayer)
 end
 
 function forces(layer::PlaneLayer)
-    f = NormedPolynomial{Complex{Float}, Float}()
+    force = similar(layer.ϕ)
 
-    add!(f, layer.ϕ)
-    add!(f, layer.z_bar_Φ, -1)
-    add!(f, layer.bar_ψ,   -1)
+    add!(force, layer.ϕ,       +1.0)
+    add!(force, layer.z_bar_Φ, -1.0)
+    add!(force, layer.bar_ψ,   -1.0)
 
-    return f
+    return force
 end
 
 #######################################
@@ -88,7 +83,7 @@ struct PlaneFiber_Displacements <: Fiber{PlaneProblem}
     fiber ::PlaneFiber
 end
 
-struct PlaneFiber_Displacements <: Fiber{PlaneProblem}
+struct PlaneFiber_Forces <: Fiber{PlaneProblem}
     fiber ::PlaneFiber
 end
 
@@ -173,5 +168,5 @@ function fill_slae!(plane_problem::PlaneProblem)
 end
 
 =#
-=#
+
 end # module PlaneProblems

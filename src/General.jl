@@ -1,23 +1,19 @@
 module General
-#=
-using ..TypeSynonyms
+
+using ..Types: RationalComplex
 
 struct Contour
     center    ::RationalComplex
-    radius    ::Float
+    radius    ::Float64
     max_power ::Int
 end
-export Contour
 
 abstract type ProblemType end
-export ProblemType
 
 abstract type Fiber{P <: ProblemType} end
-export Fiber
 
 abstract type Cohesive{P <: ProblemType} end
-export Cohesive
-
+#=
 abstract type SubMatrixType{P <: ProblemType} end
 export SubMatrixType
 

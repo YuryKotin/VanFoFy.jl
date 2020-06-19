@@ -1,4 +1,4 @@
-include("TypeSynonyms.jl")
+include("Types.jl")
 include("Design.jl")
 include("General.jl")
 include("Input.jl")
