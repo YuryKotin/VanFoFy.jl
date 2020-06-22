@@ -1,12 +1,14 @@
 using Test, OffsetArrays
-using VanFoFy.Ellipticals: Theta, theta, theta12
+using VanFoFy.SpecialTheta: Theta, theta, theta12
+using VanFoFy.Types: Lattice, raw_complex
 
 @testset "θ-functions" begin
     ω1 = complex(1.0)
     ω3 = exp(1im)
+    lattice = Lattice(ω1, ω3)
     tol_check = 1e-15
     tol_compute = 1e-20
-    θ = Theta(ω1, ω3, tol_compute)
+    θ = Theta(lattice, tol_compute)
 
 
     z = 0.63256929128615824176 + 0.47122375149242207160im

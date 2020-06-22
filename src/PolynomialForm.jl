@@ -1,6 +1,5 @@
-
 struct VarLinForm
-    form ::Dict{Int, ComplexF64}
+    form ::ComplexOffsetVector
 end
 
 struct PolynomialForm
@@ -16,34 +15,27 @@ end
 ## VarLinForm
 ###############################################################################
 
-VarLinForm() = VarLinForm(Dict{Int, ComplexF64}())
+VarLinForm(var_range::UnitRange) = VarLinForm(OffsetVector([0.0im for v in var_range], var_range))
 
-Base.getindex(vlf::VarLinForm, key::Int) = get(vlf.form, key, 0.0im)
+Base.getindex(vlf::VarLinForm, key::Int) = vlf.form[key]
 
 Base.setindex!(vlf::VarLinForm, val::ComplexF64, key::Int) = setindex!(vlf.form, val, key)
 
-variables(vlf::VarLinForm) = keys(vlf.form)
+variables(vlf::VarLinForm) = eachindex(vlf.form)
 
 function add!(dest::VarLinForm, source::VarLinForm, factor)
-    for var in variables(source)
-        dest[var] += source[var] * factor
-    end
+    @__dot__ dest += source * factor
 end
 
 function add_conjugated!(dest::VarLinForm, source::VarLinForm, factor)
-    for var in variables(source)
-        dest[var] += conj(source[var]) * factor
-    end
+    @__dot__ dest += conj(source) * factor
 end
 
-
-function mul!(form::VarLinForm, factor)
-    for var in variables(form)
-        form[var] *= factor
-    end
+function mul!(vlf::VarLinForm, factor)
+    vlf .*= factor
 end
 
-empty!(form::VarLinForm) = empty!(form.form)
+empty!(vlf::VarLinForm) = fill!(vlf.form, 0.0im)
 
 ###############################################################################
 ## PolynomialForm
@@ -157,6 +149,8 @@ similar(npoly::NormedPolynomial) = NormedPolynomial(similar(npoly.poly), npoly.r
 empty!(npoly::NormedPolynomial) = empty!(npoly.poly)
 firstindex(npoly::NormedPolynomial) = firstindex(npoly.poly)
 lastindex(npoly::NormedPolynomial) = lastindex(npoly.poly)
+
+Base.getindex(npoly::NormedPolynomial, key::Int) = npoly.poly[key]
 
 plane_conj_invarianted(npoly::NormedPolynomial) = plane_conj_invarianted(npoly.poly)
 

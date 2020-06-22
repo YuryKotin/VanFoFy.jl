@@ -2,23 +2,21 @@ module Types
 
 using OffsetArrays
 
-const Float = Float64
-export Float
-
 # OffsetArray{ComplexF64}
-const ComplexOffsetMatrix = OffsetArray{Complex{Float},2, Array{Complex{Float}, 2}}
-export ComplexOffsetMatrix
+const ComplexOffsetMatrix = OffsetArray{ComplexF64,2, Array{ComplexF64, 2}}
 
 # OffsetVector{ComplexF64}
-const ComplexOffsetVector = OffsetArray{Complex{Float},1,Array{Complex{Float}, 1}}
-export ComplexOffsetVector
+const ComplexOffsetVector = OffsetArray{ComplexF64,1,Array{ComplexF64, 1}}
 
+function differentiate!(series::ComplexOffsetVector)
+    for n in firstindex(series)+1 : lastindex(series)
+        series[n-1] = n * series[n]
+    end
+    series[end] = 0.0im
+end
+#=
 # OffsetVector{Int}
 const IntOffsetVector = OffsetArray{Int, 1, Array{Int, 1}}
-export IntOffsetVector
-
-const RationalComplex = Complex{Rational{Int}}
-export RationalComplex
 
 const RComplex2IntDict = Dict{RationalComplex, Int}
 export RComplex2IntDict
@@ -37,36 +35,7 @@ export Pole
 
 const Power = Int
 export Power
-
-###############################################################################
-
-struct BoundedVector{T <: Number}
-    vector ::OffsetArray{T, 1, Array{T, 1}}
-end
-
-function BoundedVector{T}(indices::UnitRange{Int}) where T <: Number
-    vector = OffsetVector{T}(undef, indices)
-    BoundedVector{T}(vector)
-end
-
-function Base.getindex(bv::BoundedVector{T}, key::Int) where T
-    if key in axes(bv.vector, 1)
-        @inbounds return bv.vector[key]
-    else
-        return zero(T)
-    end
-end
-
-function Base.setindex!(bv::BoundedVector{T}, val::T, key::Int) where T
-    if key in axes(bv.vector, 1)
-        @inbounds bv.vector[key] = val
-    end
-end
-
-Base.lastindex(bv::BoundedVector) = Base.lastindex(bv.vector)
-
-Base.fill!(bv::BoundedVector{T}, val::T) where T = Base.fill!(bv.vector, val)
-
+=#
 ###############################################################################
 
 mutable struct CashedVector{N <: Number}
@@ -104,5 +73,18 @@ last_cashed(v::CashedVector{N}) where N = v.last_cashed
 not_cashed(v::CashedVector{N}, ind::Int) where N = (ind > v.last_cashed)
 
 ###############################################################################
+
+"
+Решетка периодов
+"
+struct Lattice
+    ω1::ComplexF64
+    ω3::ComplexF64
+end
+
+const RationalComplex = Complex{Rational{Int}}
+
+"Преобразование рационального комплексного числа в обыкновенное"
+raw_complex(l::Lattice, rz::RationalComplex) = real(rz)*l.ω1 + imag(rz)*l.ω3
 
 end # module TypeSynonims

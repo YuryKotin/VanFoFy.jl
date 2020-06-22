@@ -1,5 +1,3 @@
-using ..Types: BoundedVector
-
 abstract type EllipticalTerm end
 
 struct WeierstrassTerm <: EllipticalTerm
@@ -64,11 +62,7 @@ end
 
 ###############################################################################
 
-
-
-const CoeffsContainer = BoundedVector{ComplexF64}
-
-function add_term_series!(output       ::CoeffsContainer, 
+function add_term_series!(output       ::BoundedVector{ComplexF64}, 
                             term       ::WeierstrassTerm; 
                             point      ::RationalComplex,
                             factor     ::ComplexF64 = 1.0+0.0im, 
@@ -107,7 +101,7 @@ function add_term_series!(output       ::CoeffsContainer,
         end
 
     else        
-        z = raw_complex(℘, Δ)
+        z = raw_complex(℘.lattice, Δ)
         rΔ = term.norm_r / abs(z)
         RΔ = norm_r / abs(z)
         K = lastindex(output)
@@ -139,7 +133,7 @@ end
 
 #######################################
 
-function add_term_series!(output::CoeffsContainer, 
+function add_term_series!(output::BoundedVector{ComplexF64}, 
                         term       ::QSpecialTerm; 
                         point      ::RationalComplex, 
                         factor     ::ComplexF64 = 1.0+0.0im, 
@@ -168,7 +162,7 @@ function add_term_series!(output::CoeffsContainer,
             Rk *= R
         end
     else
-        z = raw_complex(Q.℘, Δ)
+        z = raw_complex(Q.lattice, Δ)
         rΔ = r / abs(z)
         RΔ = R / abs(z)
 
@@ -194,7 +188,7 @@ end
 
 #######################################
 
-function add_term_series!(output::CoeffsContainer, 
+function add_term_series!(output::BoundedVector{ComplexF64}, 
                         term       ::ZTerm; 
                         point      ::RationalComplex, 
                         factor     ::ComplexF64 = 1.0+0.0im, 
@@ -202,7 +196,7 @@ function add_term_series!(output::CoeffsContainer,
                         power_shift::Int = 0, 
                         conjugated ::Bool = false,
                         praecursor ::EllipticPraecursor)
-    z = raw_complex(praecursor.℘, point)
+    z = raw_complex(praecursor.l, point)
     if conjugated
         output[0+power_shift] += conj(z * term.num_factor) * factor
         output[1+power_shift] += (abs(z)^2 / norm_r) * conj(term.num_factor) * factor
@@ -214,7 +208,7 @@ end
 
 #######################################
 
-function add_term_series!(output::CoeffsContainer, 
+function add_term_series!(output::BoundedVector{ComplexF64}, 
                         term       ::ConstTerm; 
                         point      ::RationalComplex, 
                         factor     ::ComplexF64 = 1.0+0.0im, 

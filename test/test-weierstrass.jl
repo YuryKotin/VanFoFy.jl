@@ -1,20 +1,23 @@
 module TestWeierstrass
 
 using Test, OffsetArrays
-using VanFoFy.Ellipticals: Weierstrass, raw_complex
+using VanFoFy.Types: Lattice, raw_complex
+using VanFoFy.SpecialWeierstrass: Weierstrass
 using VanFoFy.Symbolic: WeierstrassTerm, BoundedVector, add_term_series!#, fill!
 using VanFoFy.Ellipticals: EllipticPraecursor, QSpecial
 
 function test()
     ω1 = complex(1.0)
     ω3 = exp(1im)
-    wei = Weierstrass(ω1, ω3, 20)
-
-    Q = QSpecial(wei)
-    el_praecursor = EllipticPraecursor(wei, Q)
+    lattice = Lattice(ω1, ω3)
+    
+    el_praecursor = EllipticPraecursor(lattice, 20)
+    wei = el_praecursor.℘
+    Q = el_praecursor.Q
+    
 
     rz = complex(3//10, 7//10)
-    z = raw_complex(wei, rz)
+    z = raw_complex(lattice, rz)
 
 
     @testset "Weierstrass construction" begin

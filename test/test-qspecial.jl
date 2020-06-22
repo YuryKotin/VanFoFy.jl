@@ -1,18 +1,22 @@
 module TestQSpecial
 
 using Test, OffsetArrays
-using VanFoFy.Ellipticals: QSpecial, raw_complex, Weierstrass, EllipticPraecursor
+using VanFoFy.Types: raw_complex, Lattice
+using VanFoFy.Ellipticals: EllipticPraecursor
+using VanFoFy.SpecialWeierstrass: Weierstrass
+using VanFoFy.SpecialQ: QSpecial
 using VanFoFy.Symbolic: add_term_series!, QSpecialTerm, BoundedVector
 
 function test()
     ω1 = complex(1.0)
     ω3 = exp(1im)
-    el_praecursor = EllipticPraecursor(ω1, ω3, 10)
+    lattice = Lattice(ω1, ω3)
+    el_praecursor = EllipticPraecursor(lattice, 10)
     wei = el_praecursor.℘
     Q = el_praecursor.Q
 
     rz = complex(3//10, 7//10)
-    z = raw_complex(wei, rz)
+    z = raw_complex(lattice, rz)
     
     ###########################################################################
 
