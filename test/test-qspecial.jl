@@ -1,11 +1,11 @@
 module TestQSpecial
 
 using Test, OffsetArrays
-using VanFoFy.Types: raw_complex, Lattice
-using VanFoFy.Ellipticals: EllipticPraecursor
+using VanFoFy.Types: raw_complex, Lattice, BoundedVector
 using VanFoFy.SpecialWeierstrass: Weierstrass
 using VanFoFy.SpecialQ: QSpecial
-using VanFoFy.Symbolic: add_term_series!, QSpecialTerm, BoundedVector
+using VanFoFy.FunctionalTerms: EllipticPraecursor
+using VanFoFy.FunctionalTerms: add_term_series!, QSpecialTerm
 
 function test()
     ω1 = complex(1.0)

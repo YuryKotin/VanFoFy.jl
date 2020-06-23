@@ -1,3 +1,54 @@
+"
+Полином ``a_1 (z/r)^{k_1} + ... + a_n (z/r)^{k_n}``
+"
+struct PolynomialTerm <: FunctionalTerm
+    "Коэффициенты полинома"
+    coeffs :: ComplexOffsetVector
+    "Нормирующий радиус"
+    norm_r :: Float64
+end
+
+Base.getindex(term::PolynomialTerm, i::Int) = getindex(term.coeffs, i)
+Base.setindex!(term::PolynomialTerm, val::ComplexF64, i::Int) = setindex!(term.coeffs, val, i)
+Base.firstindex(term::PolynomialTerm) = firstindex(term.coeffs)
+Base.lastindex(term::PolynomialTerm) = lastindex(term.coeffs)
+
+"""
+    differentiate(term :: PolynomialTerm) ::PolynomialTerm
+
+Дифферециирование полинома. Возвращает новый полином.
+"""
+function differentiate(term :: PolynomialTerm) ::PolynomialTerm
+    bottom = firstindex(term)
+    top = lastindex(term)
+    # Индексы дифференциированного полинома
+    if top == 0 && bottom == 0
+        # Производная константы остается константой
+        d_bottom = 0
+        d_top    = 0
+    elseif top == 0
+        # Производная от многочлена, заканчивающегося константой,
+        # становится многочленом с максимум -2-й степенью
+        d_bottom = bottom - 1
+        d_top    = -2
+    else
+        # В обычном случае просто уменьшаем степени на единицу,
+        # если только нижняя степень не нулевая
+        d_bottom = bottom != 0 ? bottom - 1 : 0
+        d_top    = top    - 1
+    end
+
+    d_coeffs = OffsetVector{ComplexF64}(undef, d_bottom : d_top)
+    d_term = PolynomialTerm(d_coeffs, term.norm_r)
+    
+    for k in d_bottom : d_top
+        d_term[k] = term[k+1] * (k+1)
+    end
+    
+    return d_term
+end
+
+#=
 struct VarLinForm
     form ::ComplexOffsetVector
 end
@@ -49,17 +100,17 @@ end
 
 Base.getindex(poly::PolynomialForm, key::Int) = poly.terms[key]
 
-firstindex(poly::PolynomialForm) = firstindex(poly.terms)
-lastindex(poly::PolynomialForm) = lastindex(poly.terms)
+Base.firstindex(poly::PolynomialForm) = firstindex(poly.terms)
+Base.lastindex(poly::PolynomialForm) = lastindex(poly.terms)
 eachpower(poly::PolynomialForm) = eachindex(poly.terms)
 
-function empty!(form::PolynomialForm)
+function Base.empty!(form::PolynomialForm)
     for p in eachpower(form)
         empty!(form.terms[p])
     end
 end
 
-function similar(poly::PolynomialForm)
+function Base.similar(poly::PolynomialForm)
     index_range = firstindex(poly) : lastindex(poly)
     PolynomialForm(index_range)
 end
@@ -144,11 +195,11 @@ end
 ###############################################################################
 
 NormedPolynomial(index_range::UnitRange, r_norm::Float64) = NormedPolynomial(PolynomialForm(index_range), r_norm)
-similar(npoly::NormedPolynomial) = NormedPolynomial(similar(npoly.poly), npoly.r_norm)
+Base.similar(npoly::NormedPolynomial) = NormedPolynomial(similar(npoly.poly), npoly.r_norm)
 
-empty!(npoly::NormedPolynomial) = empty!(npoly.poly)
-firstindex(npoly::NormedPolynomial) = firstindex(npoly.poly)
-lastindex(npoly::NormedPolynomial) = lastindex(npoly.poly)
+Base.empty!(npoly::NormedPolynomial) = empty!(npoly.poly)
+Base.firstindex(npoly::NormedPolynomial) = firstindex(npoly.poly)
+Base.lastindex(npoly::NormedPolynomial) = lastindex(npoly.poly)
 
 Base.getindex(npoly::NormedPolynomial, key::Int) = npoly.poly[key]
 
@@ -171,6 +222,7 @@ function conjugate(npoly::NormedPolynomial, r_contour)
 end
 
 function z_conj_diff(normed_poly::NormedPolynomial, r_contour) end
+=#
 
 #=
 

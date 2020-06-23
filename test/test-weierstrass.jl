@@ -1,10 +1,11 @@
 module TestWeierstrass
 
 using Test, OffsetArrays
-using VanFoFy.Types: Lattice, raw_complex
+using VanFoFy.Types: Lattice, raw_complex, BoundedVector
 using VanFoFy.SpecialWeierstrass: Weierstrass
-using VanFoFy.Symbolic: WeierstrassTerm, BoundedVector, add_term_series!#, fill!
-using VanFoFy.Ellipticals: EllipticPraecursor, QSpecial
+using VanFoFy.SpecialQ: QSpecial
+using VanFoFy.FunctionalTerms: WeierstrassTerm, add_term_series!
+using VanFoFy.FunctionalTerms: EllipticPraecursor
 
 function test()
     ω1 = complex(1.0)

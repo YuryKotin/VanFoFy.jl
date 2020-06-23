@@ -1,7 +1,7 @@
 module LongitudinalShearCase
 
 using ..Types
-using ..Symbolic
+using ..FunctionalTerms
 
 include("Lshear-fiber.jl")
 include("Lshear-cohesive.jl")

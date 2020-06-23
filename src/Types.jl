@@ -74,6 +74,35 @@ not_cashed(v::CashedVector{N}, ind::Int) where N = (ind > v.last_cashed)
 
 ###############################################################################
 
+struct BoundedVector{T <: Number}
+    vector ::OffsetArray{T, 1, Array{T, 1}}
+end
+
+function BoundedVector{T}(indices::UnitRange{Int}) where T <: Number
+    vector = OffsetVector{T}(undef, indices)
+    BoundedVector{T}(vector)
+end
+
+function Base.getindex(bv::BoundedVector{T}, key::Int) where T
+    if key in axes(bv.vector, 1)
+        @inbounds return bv.vector[key]
+    else
+        return zero(T)
+    end
+end
+
+function Base.setindex!(bv::BoundedVector{T}, val::T, key::Int) where T
+    if key in axes(bv.vector, 1)
+        @inbounds bv.vector[key] = val
+    end
+end
+
+Base.lastindex(bv::BoundedVector{T}) where T = lastindex(bv.vector)
+
+Base.fill!(bv::BoundedVector{T}, val::T) where T = fill!(bv.vector, val)
+
+###############################################################################
+
 "
 Решетка периодов
 "

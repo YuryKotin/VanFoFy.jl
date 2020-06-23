@@ -2,7 +2,7 @@ module PlaneProblems
 
 using ..Input: CellData
 using ..Types
-using ..Symbolic: NormedPolynomial, add!, z_conj_diff
+using ..FunctionalTerms: NormedPolynomial, add!, z_conj_diff
 using ..General: ProblemType, Fiber
 
 abstract type PlaneProblem <: ProblemType end

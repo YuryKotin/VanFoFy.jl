@@ -2,11 +2,11 @@ module TestSymbolic
 
 using Test, OffsetArrays
 #using VanFoFy.Symbolic: VarLinForm, variables, add!, add_conjugated!, mul!
-using VanFoFy.Symbolic: EllipticalTerm, differentiate
-using VanFoFy.Symbolic: WeierstrassTerm, QSpecialTerm, ZTerm, ConstTerm
-using VanFoFy.Symbolic: add_term_series!, BoundedVector, fill!
-using VanFoFy.Ellipticals: EllipticPraecursor
-using VanFoFy.Types: raw_complex, Lattice, differentiate!
+using VanFoFy.FunctionalTerms: EllipticalTerm, differentiate
+using VanFoFy.FunctionalTerms: WeierstrassTerm, QSpecialTerm, ZTerm, ConstTerm
+using VanFoFy.FunctionalTerms: add_term_series!, fill!
+using VanFoFy.FunctionalTerms: EllipticPraecursor
+using VanFoFy.Types: raw_complex, Lattice, differentiate!, BoundedVector
 
 function test()
     @testset "SymbolicSolution" begin

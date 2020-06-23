@@ -1,6 +1,20 @@
 #==============================================================================
 Эллиптические функции Вейерштрасса (ЭФВ)
 
+# Export
+
+- `struct Weierstrass`: 
+        Экземпляр эллиптической функции Вейерштрасса с предвычисленными параметрами и 
+        кэшированными значениями
+
+ - `WeierstrassData(l::Lattice, max_derivative ::Int)`: 
+        Конструктор
+
+ - `Base.getindex(w::Weierstrass, rz::RationalComplex, n_deriv::Int)`: 
+        Кэшируемое вычисление n-й производной ЭФВ в заданной точке
+
+# Description
+
 ЭФВ нужны для построения двояко-периодических аналитических функций
 
 Здесь реализован кэш в виде словаря с ключами в виде комплексных рациональных чисел.
@@ -59,7 +73,7 @@ struct Weierstrass #<: EllipticFunction
     cash  ::  Dict{RationalComplex, CashedVector{ComplexF64}}
     "Разложение ЭФВ в ряд Лорана около полюса"
     ℘_series  ::  ComplexOffsetVector
-    "Разложения производных ЭФВ в ряд Лорана около полюса"
+    "Разложения производных ЭФВ ``℘^{(n)}(z)/(n+1)!`` в ряд Лорана около полюса"
     derivs_series  ::  ComplexOffsetMatrix
     "Номер самой старшей производной"
     max_derivative  ::  Int
@@ -120,7 +134,7 @@ struct Weierstrass #<: EllipticFunction
         # Копия разложения, поскольку `laurent_praecursor` дальше будет дифференциироваться
         ℘_series = deepcopy(laurent_praecursor)
 
-        # Разложения производных ЭФВ в ряд Лорана около полюса
+        # Разложения производных ЭФВ ``℘^{(n)}(z)/(n+1)!`` в ряд Лорана около полюса
         # Получаются путем последовательного дифференциирования разложения ℘-функции
         derivs_series = OffsetArray{ComplexF64, 2}(undef, -1:max_derivative, 0:max_derivative+2)
         # факториал (k+1)!
@@ -146,11 +160,11 @@ struct Weierstrass #<: EllipticFunction
 end
 
 """
-    cash_wei_elder_derivs!(output::CashedVector{ComplexF64}, n_deriv::Int)
+    cash_elder_derivs!(output::CashedVector{ComplexF64}, n_deriv::Int)
 
 Кэширование недостающих старших производных
 """
-function cash_wei_elder_derivs!(output::CashedVector{ComplexF64}, n_deriv::Int)
+function cash_elder_derivs!(output::CashedVector{ComplexF64}, n_deriv::Int)
     # wp_{n+2}(z) = frac{6}{(n+1)(n+2)} sum_{k=0}^n wp_k(z) wp_{n-k}(z),
     # n >= 1.
     last_cashed_deriv = last_cashed(output)
@@ -165,11 +179,11 @@ function cash_wei_elder_derivs!(output::CashedVector{ComplexF64}, n_deriv::Int)
 end
 
 """
-    cash_wei_first_derivs!(w::Weierstrass, rz::RationalComplex, output::CashedVector{ComplexF64})
+    cash_first_derivs!(w::Weierstrass, rz::RationalComplex, output::CashedVector{ComplexF64})
 
 Начальное заполнение кэша нормированными производными от -1-й до 2-й включительно в заданной точке
 """
-function cash_wei_first_derivs!(w::Weierstrass, rz::RationalComplex, output::CashedVector{ComplexF64})
+function cash_first_derivs!(w::Weierstrass, rz::RationalComplex, output::CashedVector{ComplexF64})
     ω1 = w.lattice.ω1
     e1 = w.e1
     η1 = w.η1
@@ -210,7 +224,7 @@ end
 """
     Base.getindex(w::Weierstrass, rz::RationalComplex, n_deriv::Int)
 
-Кэшируемое вычисление производной ЭФВ в заданной точке
+Кэшируемое вычисление n-й производной ЭФВ в заданной точке
 
 # Output
 
@@ -236,13 +250,13 @@ function Base.getindex(w::Weierstrass, rz::RationalComplex, n_deriv::Int)
         vector = CashedVector{ComplexF64}(-1:2*w.max_derivative+2)
         w.cash[rz] = vector
         # И заполняем его первоначальными производными
-        cash_wei_first_derivs!(w, rz, vector)
+        cash_first_derivs!(w, rz, vector)
         sign = 1.0
     end
 
     if not_cashed(vector, n_deriv)
         # Если нужной производной в кэше нет, то кэшируем все недостающие
-        cash_wei_elder_derivs!(vector, n_deriv)
+        cash_elder_derivs!(vector, n_deriv)
     end
 
     return vector[n_deriv]*sign

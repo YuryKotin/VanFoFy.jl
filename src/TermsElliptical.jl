@@ -1,30 +1,70 @@
-abstract type EllipticalTerm end
+"
+Экземпляр эллиптических функций
+"
+struct EllipticPraecursor
+    "Решетка периодов"
+    l ::Lattice
+    "Экземпляр эллиптической функции Вейерштрасса"
+    ℘ ::Weierstrass
+    "Экземпляр специальной функции Q(z)"
+    Q ::QSpecial
+    "Конструктор"
+    function EllipticPraecursor(l ::Lattice, max_derivative ::Int)
+        ℘ = Weierstrass(l, max_derivative)
+        Q = QSpecial(℘)
+        new(l, ℘, Q)
+    end
+end
 
+"Абстрактный тип-родитель слагаемых, связанных с эллиптическими функциями"
+abstract type EllipticalTerm <: FunctionalTerm end
+
+###############################################################################
+
+"слагаемое ``a r^{n+2}/(n+1)! ℘^{(n)}(z-ζ_k)``"
 struct WeierstrassTerm <: EllipticalTerm
+    "n: номер производной"
     deriv      ::Int
+    "ζ_k: полюс"
     pole       ::RationalComplex
+    "a: множитель"
     num_factor ::ComplexF64
+    "r: радиус нормирования"
     norm_r     ::Float64
 end
 
+"Слагаемое ``a r^{n+3}/(n+1)! Q^{(n)}(z-ζ_k)``"
 struct QSpecialTerm <: EllipticalTerm
+    "n: номер производной"
     deriv      ::Int
+    "ζ_k: полюс"
     pole       ::RationalComplex
+    "a: множитель"
     num_factor ::ComplexF64
+    "r: радиус нормирования"
     norm_r     ::Float64
 end
 
+"Слагаемое ``a z``"
 struct ZTerm <: EllipticalTerm
+    "a: множитель"
     num_factor ::ComplexF64
 end
 
+"Слагаемое ``a``"
 struct ConstTerm <: EllipticalTerm
+    "a: множитель"
     num_factor ::ComplexF64
 end
 
 ###############################################################################
 
-function differentiate(term::EllipticalTerm) end
+"""
+    differentiate(term<:EllipticalTerm)
+
+Дифференциирование слагаемого
+"""
+function differentiate(term<:EllipticalTerm) end
 
 function differentiate(term::WeierstrassTerm)
     # (r^{n+2}/(n+1)! ℘^{(n)}(z))' = [(n+2)/r] [r^(n+3)/(n+2)! ℘^{(n+1)}(z)]
@@ -50,17 +90,38 @@ differentiate(term::ConstTerm) = ConstTerm(0.0im)
 
 ###############################################################################
 
-const EllipticalLinForm = OffsetArray{EllipticalTerm, 1, Array{EllipticalTerm, 1}}
+"""
+    add_term_series!(   output::BoundedVector{ComplexF64}, 
+                        term       <:EllipticalTerm; 
+                        point      ::RationalComplex,
+                        factor     ::ComplexF64 = 1.0+0.0im, 
+                        norm_r     ::Float64,
+                        power_shift::Int = 0, 
+                        conjugated ::Bool = false,
+                        praecursor ::EllipticPraecursor)
 
-function differentiate(form::EllipticalLinForm)
-    d = OffsetVector{EllipticalTerm}(undef, axes(form)[1])
-    for i in eachindex(form)
-        d[i] = differentiate(form[i])
-    end
-    return d
+Разложение слагаемого в ряд и прибавление к контейнеру полинома
+
+# Arguments
+
+- `output::BoundedVector{ComplexF64}`: контейнер полинома; выход за границы не проверяется
+- `term<:EllipticalTerm`: эллиптическое слагаемое
+- `point::RationalComplex`: точка, относительно которой слагаемое раскладывается в ряд
+- `factor::ComplexF64=1.0+0.0im`: множитель
+- `norm_r::Float64`: нормирующий радиус в месте разложения
+- `power_shift::Int = 0`: сдвиг степеней; реализует умножение на ``z^k``
+- `conjugated::Bool = false`: флаг комплексного сопряжения
+- `praecursor::EllipticPraecursor`: экземпляр эллиптических функций
+"""
+function add_term_series!(  output     ::BoundedVector{ComplexF64}, 
+                            term       <:EllipticalTerm; 
+                            point      ::RationalComplex,
+                            factor     ::ComplexF64 = 1.0+0.0im, 
+                            norm_r     ::Float64,
+                            power_shift::Int = 0, 
+                            conjugated ::Bool = false,
+                            praecursor ::EllipticPraecursor)
 end
-
-###############################################################################
 
 function add_term_series!(output       ::BoundedVector{ComplexF64}, 
                             term       ::WeierstrassTerm; 
@@ -89,7 +150,7 @@ function add_term_series!(output       ::BoundedVector{ComplexF64},
         
         rn = r^(n+2)
         Rk = 1.0
-        K = lastindex(output)
+        K = lastindex(output) - power_shift
         for k in 0 : K
             addend = term.num_factor * rn * Rk * ℘.derivs_series[n,k]
             if !conjugated
@@ -104,7 +165,7 @@ function add_term_series!(output       ::BoundedVector{ComplexF64},
         z = raw_complex(℘.lattice, Δ)
         rΔ = term.norm_r / abs(z)
         RΔ = norm_r / abs(z)
-        K = lastindex(output)
+        K = lastindex(output) - power_shift
         n = term.deriv
         
         rΔ_n = (n == -1 ? rΔ : rΔ^(n+2) / (n+1))
@@ -147,7 +208,7 @@ function add_term_series!(output::BoundedVector{ComplexF64},
 
     r = term.norm_r
     R = norm_r
-    K = lastindex(output)
+    K = lastindex(output) - power_shift
     n = term.deriv
     if Δ == 0
         rn = r^(n+3)

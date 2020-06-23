@@ -1,6 +1,21 @@
 #==============================================================================
 Специальная функция Q(z)
 
+# Export
+
+- struct QSpecial:
+        Экземпляр специальной функции Q(z)
+
+- QSpecial(℘::Weierstrass):
+        Конструктор
+
+- Base.getindex(Q::QSpecial, rz::RationalComplex, n_deriv::Int):
+        Кэшируемое вычисление n-й производной функции Q(z) в заданной точке
+
+# Description
+
+α Q(z) = 0.5℘'(z) + ζ(z)℘(z) - β z ℘(z) + β ζ(z) - g_2 z / 12
+
 Нужна для придания двояко-периодичности выражению z bar Φ(z) + Ψ(z).
 Все вычисления кэшируются так же, как и у эллиптической функции Вейерштрасса.
 ===============================================================================#
@@ -18,7 +33,7 @@ using ..SpecialWeierstrass: Weierstrass
 using OffsetArrays
 
 "
-Специальная функция Q(z)
+Экземпляр специальной функции Q(z)
 
 # Конструктор
 
@@ -66,10 +81,13 @@ struct QSpecial #<: EllipticFunction
         cash = Dict{RationalComplex, CashedVector{ComplexF64}}()
     
         # Разложение функции Q(z) в ряд Тейлора около полюса
+        # Используется разложение в ряд Лорана функции ℘(z) около полюса
         Q_series = OffsetVector{ComplexF64}(undef, 0:2*(℘.max_derivative+2))
         fill!(Q_series, 0.0im)
         ℘_series = ℘.℘_series
         K = lastindex(℘_series)
+
+        # По следующей формуле собирается разложение в ряд функции Q(z)
         # α Q(z) = 0.5℘'(z) + ζ(z)℘(z) - β z ℘(z) + β ζ(z) - g_2 z / 12
         for k in 0 : K-1
         # 0.5 ℘'(z)
@@ -93,14 +111,14 @@ struct QSpecial #<: EllipticFunction
     
         Q_series[:] ./= α
     
-        # Разложение производных функции Q(z) в ряд Тейлора около полюса
+        # Разложение производных ``Q^{(n)}(z)/(n+1)!`` в ряд Тейлора около полюса
         derivs_series = OffsetArray{ComplexF64, 2}(undef, 0:℘.max_derivative, 0:℘.max_derivative+2)
         for k in 0:℘.max_derivative
+            Q_series[:] ./= k+1
             for n in 0 : ℘.max_derivative+2
                 derivs_series[k,n] = Q_series[n]
             end
             differentiate!(Q_series)
-            Q_series[:] ./= k+2
         end
     
         ######################################################################
@@ -109,9 +127,12 @@ struct QSpecial #<: EllipticFunction
     end
 end
 
+"""
+    cash_elder_derivs!(output::CashedVector{ComplexF64}, Q::QSpecial, rz::RationalComplex, n_deriv::Int)
 
-
-function cash_Q_elder_derivs!(output::CashedVector{ComplexF64}, Q::QSpecial, 
+Кэширование недостающих старших производных
+"""
+function cash_elder_derivs!(output::CashedVector{ComplexF64}, Q::QSpecial, 
                               rz::RationalComplex, n_deriv::Int)
     ℘ = Q.℘
     α = Q.α
@@ -135,7 +156,12 @@ function cash_Q_elder_derivs!(output::CashedVector{ComplexF64}, Q::QSpecial,
     end
 end
 
-function cash_Q_first_derivs!(output::CashedVector{ComplexF64}, Q::QSpecial, rz::RationalComplex)
+"""
+    cash_first_derivs!(output::CashedVector{ComplexF64}, Q::QSpecial, rz::RationalComplex)
+
+Начальное заполнение кэша нормированными значениями Q(z) и Q'(z).
+"""
+function cash_first_derivs!(output::CashedVector{ComplexF64}, Q::QSpecial, rz::RationalComplex)
     ℘ = Q.℘
     α = Q.α
     β = Q.β
@@ -162,7 +188,15 @@ function cash_Q_first_derivs!(output::CashedVector{ComplexF64}, Q::QSpecial, rz:
     output[1] = Q1 / α
 end
 
+"""
+    Base.getindex(Q::QSpecial, rz::RationalComplex, n_deriv::Int)
 
+Кэшируемое вычисление n-й производной функции Q(z) в заданной точке
+
+# Output
+
+``|z|^(n+3)/(n+1)! Q^{(n)}(z)``
+"""
 function Base.getindex(Q::QSpecial, rz::RationalComplex, n_deriv::Int)
     if rz == 0
         error("Can't compute Q special functions at zero point")
@@ -177,12 +211,12 @@ function Base.getindex(Q::QSpecial, rz::RationalComplex, n_deriv::Int)
     else
         derivs_array = CashedVector{ComplexF64}(0:2*Q.℘.max_derivative+1)
         Q.cash[rz] = derivs_array
-        cash_Q_first_derivs!(derivs_array, Q, rz)
+        cash_first_derivs!(derivs_array, Q, rz)
         sign = 1.0
     end
 
     if not_cashed(derivs_array, n_deriv)
-        cash_Q_elder_derivs!(derivs_array, Q, rz, n_deriv)
+        cash_elder_derivs!(derivs_array, Q, rz, n_deriv)
     end
     return derivs_array[n_deriv] * sign
 end
