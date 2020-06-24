@@ -1,5 +1,5 @@
 module PlaneProblems
-
+#=
 using ..Input: CellData
 using ..Types
 using ..FunctionalTerms: NormedPolynomial, add!, z_conj_diff
@@ -87,7 +87,7 @@ struct PlaneFiber_Forces <: Fiber{PlaneProblem}
     fiber ::PlaneFiber
 end
 
-
+=#
 
 #=
 using ..Symbolic: Polynomial, max_abs_index, add!

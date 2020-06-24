@@ -7,6 +7,7 @@ using VanFoFy.FunctionalTerms: WeierstrassTerm, QSpecialTerm, ZTerm, ConstTerm
 using VanFoFy.FunctionalTerms: add_term_series!, fill!
 using VanFoFy.FunctionalTerms: EllipticPraecursor
 using VanFoFy.Types: raw_complex, Lattice, differentiate!, BoundedVector
+using VanFoFy.FunctionalTerms: PolynomialTerm, conjugate, z_conj_diff
 
 function test()
     @testset "SymbolicSolution" begin
@@ -19,7 +20,7 @@ function test()
         @test ss[14] isa QSpecialTerm
     end
 
-    @testset "Complex computing check" begin
+    @testset "Ellipticals complex computing check" begin
         ω1 = complex(1.0)
         ω3 = exp(1im)
         lattice = Lattice(ω1, ω3)
@@ -445,6 +446,235 @@ function test()
             @test coeffs[n] ≈ ref_array[n] atol=1e-14
         end
 
+    end
+
+    @testset "Polynomials, differentiate" begin
+        top = 3
+        bottom = -3
+    
+        poly_coeffs = OffsetVector([1.0+0.0im for n in bottom:top], bottom:top) 
+        poly = PolynomialTerm(poly_coeffs, 1.0)
+
+        d_poly = differentiate(poly)
+        d_bottom = -4
+        d_top = 2
+
+        @test firstindex(d_poly) == d_bottom
+        @test lastindex(d_poly)  ==  d_top
+
+        ref_coeffs = OffsetVector([(1.0+0.0im)*(n+1) for n in d_bottom:d_top], d_bottom:d_top)
+
+        for i in eachindex(d_poly)
+            @test d_poly[i] ≈ ref_coeffs[i]
+        end
+
+        ################
+
+        top = 3
+        bottom = 0
+    
+        poly_coeffs = OffsetVector([1.0+0.0im for n in bottom:top], bottom:top) 
+        poly = PolynomialTerm(poly_coeffs, 1.0)
+
+        d_poly = differentiate(poly)
+        d_bottom = 0
+        d_top = 2
+
+        @test firstindex(d_poly) == d_bottom
+        @test lastindex(d_poly)  ==  d_top
+
+        ref_coeffs = OffsetVector([(1.0+0.0im)*(n+1) for n in d_bottom:d_top], d_bottom:d_top)
+
+        for i in eachindex(d_poly)
+            @test d_poly[i] ≈ ref_coeffs[i]
+        end
+
+        ################
+
+        top = 0
+        bottom = -3
+    
+        poly_coeffs = OffsetVector([1.0+0.0im for n in bottom:top], bottom:top) 
+        poly = PolynomialTerm(poly_coeffs, 1.0)
+
+        d_poly = differentiate(poly)
+        d_bottom = -4
+        d_top = -2
+
+        @test firstindex(d_poly) == d_bottom
+        @test lastindex(d_poly)  ==  d_top
+
+        ref_coeffs = OffsetVector([(1.0+0.0im)*(n+1) for n in d_bottom:d_top], d_bottom:d_top)
+
+        for i in eachindex(d_poly)
+            @test d_poly[i] ≈ ref_coeffs[i]
+        end
+
+        ################
+
+        top = 0
+        bottom = 0
+    
+        poly_coeffs = OffsetVector([1.0+0.0im for n in bottom:top], bottom:top) 
+        poly = PolynomialTerm(poly_coeffs, 1.0)
+
+        d_poly = differentiate(poly)
+        d_bottom = 0
+        d_top = 0
+
+        @test firstindex(d_poly) == d_bottom
+        @test lastindex(d_poly)  ==  d_top
+
+        ref_coeffs = OffsetVector([0.0im for n in d_bottom:d_top], d_bottom:d_top)
+
+        for i in eachindex(d_poly)
+            @test d_poly[i] ≈ ref_coeffs[i]
+        end
+
+    end
+
+    @testset "Polynomials, conjugate" begin
+        top = 3
+        bottom = -5
+    
+        poly_coeffs = OffsetVector([1.0+1.0im for n in bottom:top], bottom:top) 
+        poly = PolynomialTerm(poly_coeffs, 1.0)
+
+        c_poly = conjugate(poly, 1.0)
+        c_bottom = -3
+        c_top = 5
+
+        @test firstindex(c_poly) == c_bottom
+        @test lastindex(c_poly)  ==  c_top
+
+        ref_coeffs = OffsetVector([(1.0-1.0im) for n in c_bottom:c_top], c_bottom:c_top)
+
+        for i in eachindex(c_poly)
+            @test c_poly[i] ≈ ref_coeffs[i]
+        end
+
+    end
+
+    @testset "Polynomials, z_conj_diff" begin
+        top = 3
+        bottom = -3
+    
+        poly_coeffs = OffsetVector([1.0+1.0im for n in bottom:top], bottom:top) 
+        poly = PolynomialTerm(poly_coeffs, 1.0)
+
+        d_bottom = -4
+        d_top = 2
+
+        c_bottom = -2
+        c_top = 4
+
+        z_bottom = -1
+        z_top = 5
+
+        z_poly = z_conj_diff(poly, 1.0)
+
+        @test firstindex(z_poly) == z_bottom
+        @test lastindex(z_poly)  == z_top
+
+        ref_coeffs = OffsetVector([ 3-3im,
+                                    2-2im,
+                                    1-1im,
+                                    0im,
+                                    -1+1im,
+                                    -2+2im,
+                                    -3+3im], z_bottom:z_top)
+
+        for i in eachindex(z_poly)
+            @test z_poly[i] ≈ ref_coeffs[i]
+        end
+
+        ################
+
+        top = 3
+        bottom = 0
+    
+        poly_coeffs = OffsetVector([1.0+1.0im for n in bottom:top], bottom:top) 
+        poly = PolynomialTerm(poly_coeffs, 1.0)
+
+        d_bottom = 0
+        d_top = 2
+
+        c_bottom = -2
+        c_top = 0
+
+        z_bottom = -1
+        z_top = 1
+
+        z_poly = z_conj_diff(poly, 1.0)
+
+        @test firstindex(z_poly) == z_bottom
+        @test lastindex(z_poly)  == z_top
+
+        ref_coeffs = OffsetVector([ 3-3im,
+                                    2-2im,
+                                    1-1im], z_bottom:z_top)
+
+        for i in eachindex(z_poly)
+            @test z_poly[i] ≈ ref_coeffs[i]
+        end
+
+        ################
+
+        bottom = -3
+        top = 0
+        
+        poly_coeffs = OffsetVector([1.0+1.0im for n in bottom:top], bottom:top) 
+        poly = PolynomialTerm(poly_coeffs, 1.0)
+
+        d_bottom = -4
+        d_top = -2
+
+        c_bottom = 2
+        c_top = 4
+
+        z_bottom = 3
+        z_top = 5
+
+        z_poly = z_conj_diff(poly, 1.0)
+
+        @test firstindex(z_poly) == z_bottom
+        @test lastindex(z_poly)  == z_top
+
+        ref_coeffs = OffsetVector([ -1+1im,
+                                    -2+2im,
+                                    -3+3im], z_bottom:z_top)
+
+        for i in eachindex(z_poly)
+            @test z_poly[i] ≈ ref_coeffs[i]
+        end
+
+        ################
+
+        bottom = 0
+        top = 0
+        
+        poly_coeffs = OffsetVector([1.0+1.0im for n in bottom:top], bottom:top) 
+        poly = PolynomialTerm(poly_coeffs, 1.0)
+
+        d_bottom = 0
+        d_top = 0
+
+        c_bottom = 0
+        c_top = 0
+
+        z_bottom = 0
+        z_top = 0
+
+        z_poly = z_conj_diff(poly, 1.0)
+
+        @test firstindex(z_poly) == z_bottom
+        @test lastindex(z_poly)  == z_top
+
+        ref_coeffs = OffsetVector([ 0im,], z_bottom:z_top)
+
+        for i in eachindex(z_poly)
+            @test z_poly[i] ≈ ref_coeffs[i]
+        end
     end
 end
 

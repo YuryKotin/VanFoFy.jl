@@ -64,8 +64,6 @@ end
 
 Дифференциирование слагаемого
 """
-function differentiate(term<:EllipticalTerm) end
-
 function differentiate(term::WeierstrassTerm)
     # (r^{n+2}/(n+1)! ℘^{(n)}(z))' = [(n+2)/r] [r^(n+3)/(n+2)! ℘^{(n+1)}(z)]
     deriv = term.deriv + 1
@@ -113,16 +111,6 @@ differentiate(term::ConstTerm) = ConstTerm(0.0im)
 - `conjugated::Bool = false`: флаг комплексного сопряжения
 - `praecursor::EllipticPraecursor`: экземпляр эллиптических функций
 """
-function add_term_series!(  output     ::BoundedVector{ComplexF64}, 
-                            term       <:EllipticalTerm; 
-                            point      ::RationalComplex,
-                            factor     ::ComplexF64 = 1.0+0.0im, 
-                            norm_r     ::Float64,
-                            power_shift::Int = 0, 
-                            conjugated ::Bool = false,
-                            praecursor ::EllipticPraecursor)
-end
-
 function add_term_series!(output       ::BoundedVector{ComplexF64}, 
                             term       ::WeierstrassTerm; 
                             point      ::RationalComplex,
@@ -150,7 +138,7 @@ function add_term_series!(output       ::BoundedVector{ComplexF64},
         
         rn = r^(n+2)
         Rk = 1.0
-        K = lastindex(output) - power_shift
+        K = lastindex(output)
         for k in 0 : K
             addend = term.num_factor * rn * Rk * ℘.derivs_series[n,k]
             if !conjugated
@@ -165,7 +153,7 @@ function add_term_series!(output       ::BoundedVector{ComplexF64},
         z = raw_complex(℘.lattice, Δ)
         rΔ = term.norm_r / abs(z)
         RΔ = norm_r / abs(z)
-        K = lastindex(output) - power_shift
+        K = lastindex(output)
         n = term.deriv
         
         rΔ_n = (n == -1 ? rΔ : rΔ^(n+2) / (n+1))
@@ -208,7 +196,7 @@ function add_term_series!(output::BoundedVector{ComplexF64},
 
     r = term.norm_r
     R = norm_r
-    K = lastindex(output) - power_shift
+    K = lastindex(output)
     n = term.deriv
     if Δ == 0
         rn = r^(n+3)
