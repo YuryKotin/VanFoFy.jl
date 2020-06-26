@@ -1,4 +1,68 @@
 module PlaneProblems
+
+using ..FunctionalTerms: PolynomialTerm
+using ..Types: VarLinForm, IntOffsetVector
+
+using OffsetArrays
+
+struct PlaneLayer
+    E       ::Float64
+    ν       ::Float64
+    r_inner ::Float64
+    r_outer ::Float64
+    ϕ       ::VarLinForm{PolynomialTerm}
+    z_bar_Φ ::VarLinForm{PolynomialTerm}
+    bar_ψ   ::VarLinForm{PolynomialTerm}
+end
+
+function PlaneLayer(E::Float64, 
+                    ν::Float64, 
+                    r_inner::Float64, 
+                    r_outer::Float64, 
+                    r_fiber::Float64, 
+                    var_indices::IntOffsetVector) 
+
+    n_vars = size(var_indices, 1)
+    if n_vars % 2 == 1
+        error("Odd number of variables complex parts")
+    end
+
+    max_power = n_vars - 1
+    bottom_var = firstindex(var_indices)
+    top_var    = lastindex(var_indices)
+
+    ϕ = VarLinForm(
+                    OffsetVector([PolynomialTerm(-max_power:max_power+2, r_fiber) 
+                                for v in var_indices], 
+                                bottom_var : top_var)
+        )
+    
+    ψ = VarLinForm(
+                    OffsetVector([PolynomialTerm(-max_power:max_power+2, r_fiber) 
+                                for v in var_indices], 
+                                bottom_var : top_var)
+        )       
+
+    for v in bottom_var : top_var
+        p = (v - bottom_var) ÷ 2
+        ϕ_poly = ϕ[v]
+        ψ_poly = ψ[v]
+        if (v - bottom_var) % 2 == 0
+            ϕ_poly[p] = 1.0+0.0im
+            ψ_poly[p] = 1.0+0.0im
+        else
+            ϕ_poly[p] = 1.0im
+            ψ_poly[p] = 1.0im
+        end
+    end
+
+    if r_inner != 0.0
+
+    end
+end
+
+function PlaneLayer(E, ν, r_outer, prev_layer) end
+
 #=
 using ..Input: CellData
 using ..Types
@@ -21,17 +85,17 @@ function couple!(dest::PlaneLayer, source::PlaneLayer)
     if dest.r_inner != source.r_outer
         error("Layers don't touch")
     end
-
+    
     E1 = source.E
     ν1 = source.ν
     G1 = E1/(2*(1+ν1))
     κ1 = 3 - 4*ν1
-
+    
     E2 = dest.E
     ν2 = dest.ν
     κ2 = 3 - 4*ν2
     G2 = E2/(2*(1+ν2))
-
+    
     empty!(dest.ϕ)
     empty!(dest.z_bar_Φ)
     empty!(dest.bar_ψ)

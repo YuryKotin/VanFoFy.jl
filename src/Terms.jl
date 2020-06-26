@@ -36,13 +36,22 @@
 ## Polynomial
 
 - struct PolynomialTerm <: FunctionalTerm:
-        тип для слагаемых в виде полинома
+        тип для слагаемых в виде нормированного полинома
 
 - differentiate(term :: PolynomialTerm)
-        дифференциирование слагаемого
+        дифференциирование нормированного полинома
+
+- conjugate(term::PolynomialTerm, conj_r::Float64)
+        сопряжение нормированного полинома по контуру
+
+- function z_conj_diff(term::PolynomialTerm, conj_r::Float64) ::PolynomialTerm
+        Для многочлена term(z) вычисляет многочлен z bar term'(z)
+
+- add!(dest::PolynomialTerm, source::PolynomialTerm, factor::ComplexF64)
+        Сложение двух нормированных полиномов
 
 - add_term_series!(output, term :: PolynomialTerm; factor, power_shift, conjugated):
-        разложение слагаемого в ряд term и прибавление этого ряда к контейнеру output
+        прибавление полинома к контейнеру output
         
 # Description
 

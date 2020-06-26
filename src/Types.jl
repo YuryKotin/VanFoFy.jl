@@ -3,10 +3,15 @@ module Types
 using OffsetArrays
 
 # OffsetArray{ComplexF64}
-const ComplexOffsetMatrix = OffsetArray{ComplexF64,2, Array{ComplexF64, 2}}
+const ComplexOffsetMatrix = OffsetArray{ComplexF64, 2, Array{ComplexF64, 2}}
 
 # OffsetVector{ComplexF64}
-const ComplexOffsetVector = OffsetArray{ComplexF64,1,Array{ComplexF64, 1}}
+const ComplexOffsetVector = OffsetArray{ComplexF64, 1, Array{ComplexF64, 1}}
+
+# OffsetVector{Int}
+const IntOffsetVector = OffsetArray{Int, 1, Array{Int, 1}}
+
+###############################################################################
 
 function differentiate!(series::ComplexOffsetVector)
     for n in firstindex(series)+1 : lastindex(series)
@@ -14,28 +19,7 @@ function differentiate!(series::ComplexOffsetVector)
     end
     series[end] = 0.0im
 end
-#=
-# OffsetVector{Int}
-const IntOffsetVector = OffsetArray{Int, 1, Array{Int, 1}}
 
-const RComplex2IntDict = Dict{RationalComplex, Int}
-export RComplex2IntDict
-
-const RComplex2OffsetMatrix = Dict{RationalComplex,ComplexOffsetMatrix}
-export RComplex2OffsetMatrix
-
-const Variable = Int
-export Variable
-
-const Coefficient = ComplexF64
-export Coefficient
-
-const Pole = RationalComplex
-export Pole
-
-const Power = Int
-export Power
-=#
 ###############################################################################
 
 mutable struct CashedVector{N <: Number}
@@ -100,6 +84,14 @@ end
 Base.lastindex(bv::BoundedVector{T}) where T = lastindex(bv.vector)
 
 Base.fill!(bv::BoundedVector{T}, val::T) where T = fill!(bv.vector, val)
+
+###############################################################################
+
+struct VarLinForm{T}
+    terms::OffsetArray{T,1,Array{T, 1}}
+end
+
+Base.getindex(form::VarLinForm, ind::Int) = getindex(form.terms, ind)
 
 ###############################################################################
 
