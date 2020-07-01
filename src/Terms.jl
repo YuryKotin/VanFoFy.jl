@@ -70,6 +70,7 @@ module FunctionalTerms
 
 using ..Types: Lattice, RationalComplex, raw_complex
 using ..Types: BoundedVector, ComplexOffsetVector
+using ..Types: VarLinForm
 using ..SpecialWeierstrass: Weierstrass
 using ..SpecialQ: QSpecial
 

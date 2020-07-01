@@ -92,6 +92,11 @@ struct VarLinForm{T}
 end
 
 Base.getindex(form::VarLinForm, ind::Int) = getindex(form.terms, ind)
+Base.similar(form::VarLinForm) = VarLinForm(similar(form.terms))
+Base.firstindex(form::VarLinForm) = firstindex(form.terms)
+Base.lastindex(form::VarLinForm) = lastindex(form.terms)
+Base.eachindex(form::VarLinForm) = eachindex(form.terms)
+Base.axes(form::VarLinForm, d) = axes(form.terms, d)
 
 ###############################################################################
 

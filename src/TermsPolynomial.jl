@@ -21,6 +21,7 @@ Base.setindex!(term::PolynomialTerm, val::ComplexF64, i::Int) = setindex!(term.c
 Base.firstindex(term::PolynomialTerm) = firstindex(term.coeffs)
 Base.lastindex(term::PolynomialTerm) = lastindex(term.coeffs)
 Base.eachindex(term::PolynomialTerm) = eachindex(term.coeffs)
+Base.similar(term::PolynomialTerm) = PolynomialTerm(similar(term.coeffs), term.norm_r)
 
 """
     differentiate(term :: PolynomialTerm) ::PolynomialTerm
@@ -95,6 +96,38 @@ function conjugate(term::PolynomialTerm, conj_r::Float64) ::PolynomialTerm
     conj_term[0] = conj(term[0])
 
     return conj_term
+end
+
+"""
+    reconjugate(term::PolynomialTerm, old_conj_r::Float64, new_conj_r::Float64)
+
+Пересопряжение полинома по другому контуру
+"""
+function reconjugate(term::PolynomialTerm, old_conj_r::Float64, new_conj_r::Float64)
+    rc_term = similar(term)
+    
+    # bar (z/r)^n = (R1/r)^{2n} (r/z)^n =
+    #             = (R2/r)^{2n} (r/z)^n =
+    #             = (R2/R1)^{2n} (R1/r)^{2n} (r/z)^n
+    R1 = old_conj_r
+    R2 = new_conj_r
+
+    factor = (R2 / R1)^2
+    f_pow = factor
+    
+    bottom = firstindex(term)
+    top = lastindex(term)
+    for i in 1 : top
+        rc_term[i] = term[i] * f_pow
+        f_pow *= factor
+    end
+    f_pow = 1/factor
+    for i in -1 : -1 : bottom
+        rc_term[i] = term[i] * f_pow
+        f_pow /= factor
+    end
+
+    return rc_term
 end
 
 """
@@ -173,7 +206,7 @@ end
 
 Выход за границы массивов не проверяется.
 """
-function add!(dest::PolynomialTerm, source::PolynomialTerm, factor::ComplexF64)
+function add!(dest::PolynomialTerm, source::PolynomialTerm, factor)
     r = dest.norm_r
     R = source.norm_r
     # z/r = (z/R) * (R/r)
@@ -208,4 +241,97 @@ function add_term_series!(  output::BoundedVector{ComplexF64},
     for i in eachindex(term)
         output[i] += term[i] * factor
     end
+end
+
+###############################################################################
+"
+Линейно-полиномиальная форма вида
+``v_1 P_1(z) + ... +  v_N P_N(z)``,
+где 
+- ``v_m`` - переменные линейной формы
+- ``P_m(z)`` - полином
+"
+const PolynomialSolution = VarLinForm{PolynomialTerm}
+
+"""
+    z_conj_diff(sol::PolynomialSolution, conj_r::Float64)
+
+Для линейно-полиномиальной формы ϕ(z) вычисляет многочлен z bar ϕ'(z)
+"""
+function z_conj_diff(sol::PolynomialSolution, conj_r::Float64)
+    VarLinForm{PolynomialTerm}(
+        OffsetVector(
+            [
+                z_conj_diff(sol[v], conj_r) for v in eachindex(sol)
+            ],
+            axes(sol, 1)
+        )
+    )
+end
+
+"""
+    function conjugate(sol::PolynomialSolution, conj_r::Float64)
+
+Сопряжение линейно-полиномиальной формы по контуру радиусом conj_r. Возвращает новое решение.
+"""
+function conjugate(sol::PolynomialSolution, conj_r::Float64)
+    VarLinForm{PolynomialTerm}(
+        OffsetVector(
+            [
+                conjugate(sol[v], conj_r) for v in eachindex(sol)
+            ],
+            axes(sol, 1)
+        )
+    )
+end
+
+"""
+    reconjugate(sol::PolynomialSolution, old_conj_r::Float64, new_conj_r::Float64)
+
+Пересопряжение линейно-полиномиальной формы по другому контуру
+"""
+function reconjugate(sol::PolynomialSolution, old_conj_r::Float64, new_conj_r::Float64)
+    VarLinForm{PolynomialTerm}(
+        OffsetVector(
+            [
+                reconjugate(sol[v], old_conj_r, new_conj_r) for v in eachindex(sol)
+            ],
+            axes(sol, 1)
+        )
+    )
+end
+
+"""
+    add!(dest::PolynomialSolution, source::PolynomialSolution, factor)
+
+Сложение двух линейно-полиномиальных форм. dest += source * factor.
+
+Выход за границы массивов не проверяется.
+"""
+function add!(dest::PolynomialSolution, source::PolynomialSolution, factor)
+    for v in eachindex(source)
+        add!(dest[v], source[v], factor)
+    end
+end
+
+"""
+    similar(source::VarLinForm{PolynomialTerm})
+
+Создание аналогичной линейно-полиномиальной формы
+"""
+function Base.similar(source::VarLinForm{PolynomialTerm})
+    form = VarLinForm{PolynomialTerm}(
+        OffsetVector(
+            [
+                PolynomialTerm(
+                    firstindex(source[v]) : lastindex(source[v]),
+                    source[v].norm_r
+                )
+                for v in eachindex(source)
+            ],
+            firstindex(source) : lastindex(source)
+        )
+
+    )
+    return form
 end

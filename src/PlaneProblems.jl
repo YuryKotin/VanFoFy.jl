@@ -1,49 +1,80 @@
+#==============================================================================
+# Org
+
+* TODO Полые волокна
+==============================================================================#
+
 module PlaneProblems
 
-using ..FunctionalTerms: PolynomialTerm
-using ..Types: VarLinForm, IntOffsetVector
+using ..FunctionalTerms: PolynomialTerm, PolynomialSolution
+using ..FunctionalTerms: z_conj_diff, conjugate, reconjugate, add!
+using ..Types: VarLinForm
 
 using OffsetArrays
 
+"
+Слой волокна для плоской задачи
+"
 struct PlaneLayer
+    " модуль Юнга"
     E       ::Float64
+    "коэффициент Пуассона"
     ν       ::Float64
+    "внутренний радиус слоя"
     r_inner ::Float64
+    "внешний радиус слоя"
     r_outer ::Float64
-    ϕ       ::VarLinForm{PolynomialTerm}
-    z_bar_Φ ::VarLinForm{PolynomialTerm}
-    bar_ψ   ::VarLinForm{PolynomialTerm}
+    "функции решения в виде линейных форм от нормированных полиномов"
+    ϕ             ::PolynomialSolution
+    inner_z_bar_Φ ::PolynomialSolution
+    inner_bar_ψ   ::PolynomialSolution
+    outer_z_bar_Φ ::PolynomialSolution
+    outer_bar_ψ   ::PolynomialSolution
 end
 
+
+"""
+Сплошное ядро
+"""
 function PlaneLayer(E::Float64, 
-                    ν::Float64, 
-                    r_inner::Float64, 
+                    ν::Float64,  
                     r_outer::Float64, 
                     r_fiber::Float64, 
-                    var_indices::IntOffsetVector) 
+                    var_indices::UnitRange{Int}) 
 
+    if r_outer <= 0 || r_fiber <= 0
+        error("Nonpositive radius")
+    end
+    if r_outer > r_fiber
+        error("Layer is bigger than fiber")
+    end
+    
     n_vars = size(var_indices, 1)
     if n_vars % 2 == 1
         error("Odd number of variables complex parts")
     end
 
     max_power = n_vars - 1
-    bottom_var = firstindex(var_indices)
-    top_var    = lastindex(var_indices)
 
     ϕ = VarLinForm(
-                    OffsetVector([PolynomialTerm(-max_power:max_power+2, r_fiber) 
-                                for v in var_indices], 
-                                bottom_var : top_var)
+        OffsetVector(
+            [
+                PolynomialTerm(-max_power:max_power+2, r_fiber) for v in var_indices
+            ], 
+            var_indices
         )
+    )
     
     ψ = VarLinForm(
-                    OffsetVector([PolynomialTerm(-max_power:max_power+2, r_fiber) 
-                                for v in var_indices], 
-                                bottom_var : top_var)
+        OffsetVector(
+            [
+                PolynomialTerm(-max_power-2:max_power, r_fiber) for v in var_indices
+            ], 
+            var_indices)
         )       
 
-    for v in bottom_var : top_var
+    bottom_var = first(var_indices)
+    for v in var_indices
         p = (v - bottom_var) ÷ 2
         ϕ_poly = ϕ[v]
         ψ_poly = ψ[v]
@@ -51,186 +82,67 @@ function PlaneLayer(E::Float64,
             ϕ_poly[p] = 1.0+0.0im
             ψ_poly[p] = 1.0+0.0im
         else
-            ϕ_poly[p] = 1.0im
-            ψ_poly[p] = 1.0im
+            ϕ_poly[p] = 0.0+1.0im
+            ψ_poly[p] = 0.0+1.0im
         end
     end
 
-    if r_inner != 0.0
+    outer_z_bar_Φ = z_conj_diff(ϕ, r_outer)
+    outer_bar_ψ = conjugate(ψ, r_outer)
 
-    end
+    inner_z_bar_Φ = similar(outer_z_bar_Φ)
+    inner_bar_ψ =   similar(outer_bar_ψ)
+
+
+    PlaneLayer(E, ν, 0.0, r_outer, ϕ, 
+                inner_z_bar_Φ, inner_bar_ψ, outer_z_bar_Φ, outer_bar_ψ)
+
 end
 
-function PlaneLayer(E, ν, r_outer, prev_layer) end
-
-#=
-using ..Input: CellData
-using ..Types
-using ..FunctionalTerms: NormedPolynomial, add!, z_conj_diff
-using ..General: ProblemType, Fiber
-
-abstract type PlaneProblem <: ProblemType end
-
-struct PlaneLayer
-    E       ::Float64
-    ν       ::Float64
-    r_inner ::Float64
-    r_outer ::Float64
-    ϕ       ::NormedPolynomial
-    z_bar_Φ ::NormedPolynomial
-    bar_ψ   ::NormedPolynomial
-end
-
-function couple!(dest::PlaneLayer, source::PlaneLayer) 
-    if dest.r_inner != source.r_outer
-        error("Layers don't touch")
+"""
+Следующий слой
+"""
+function PlaneLayer(E::Float64, ν::Float64, r_outer::Float64, prev_layer::PlaneLayer)
+    r_inner = prev_layer.r_outer
+    if r_inner >= r_outer
+        error("Layer has nonpositive width")
     end
-    
-    E1 = source.E
-    ν1 = source.ν
+
+    E1 = prev_layer.E
+    ν1 = prev_layer.ν
     G1 = E1/(2*(1+ν1))
     κ1 = 3 - 4*ν1
     
-    E2 = dest.E
-    ν2 = dest.ν
+    E2 = E
+    ν2 = ν
     κ2 = 3 - 4*ν2
     G2 = E2/(2*(1+ν2))
+
+    ϕ1       = prev_layer.ϕ
+    z_bar_Φ1 = prev_layer.outer_z_bar_Φ
+    bar_ψ1   = prev_layer.outer_bar_ψ
+
+    ϕ2 = similar(prev_layer.ϕ)
+
+    bar_ψ2 = similar(prev_layer.outer_bar_ψ)
     
-    empty!(dest.ϕ)
-    empty!(dest.z_bar_Φ)
-    empty!(dest.bar_ψ)
-
-    add!(dest.ϕ, source.ϕ,       (1+κ1*G2/G1)/(1+κ2))
-    add!(dest.ϕ, source.z_bar_Φ, (1-G2/G1)   /(1+κ2))
-    add!(dest.ϕ, source.bar_ψ,   (1-G2/G1)   /(1+κ2))
-
-    dest.z_bar_Φ = z_conj_diff(dest.ϕ, dest.r_inner, 1.0)
-
-    add!(dest.bar_ψ, source.ϕ,       +1.0)
-    add!(dest.bar_ψ, source.z_bar_Φ, +1.0)
-    add!(dest.bar_ψ, source.bar_ψ,   +1.0)
-    add!(dest.bar_ψ, dest.ϕ,         -1.0)
-    add!(dest.bar_ψ, dest.z_bar_Φ,   -1.0)
-end
-
-function displacements(layer::PlaneLayer)
-    E = layer.E
-    ν = layer.ν
-    G = E/(2*(1+ν))
-    κ = 3 - 4*ν
+    add!(ϕ2, ϕ1,       (1+κ1*G2/G1)/(1+κ2))
+    add!(ϕ2, z_bar_Φ1, (1-G2/G1)   /(1+κ2))
+    add!(ϕ2, bar_ψ1,   (1-G2/G1)   /(1+κ2))
     
-    displ = similar(layer.ϕ)
-    add!(displ, layer.ϕ,        κ/(2G))
-    add!(displ, layer.z_bar_Φ, -1/(2G))
-    add!(displ, layer.bar_ψ,   -1/(2G))
+    z_bar_Φ2 = z_conj_diff(ϕ2, r_inner)
 
-    return displ
+    add!(bar_ψ2, ϕ1,       +1.0)
+    add!(bar_ψ2, z_bar_Φ1, +1.0)
+    add!(bar_ψ2, bar_ψ1,   +1.0)
+    add!(bar_ψ2, ϕ2,       -1.0)
+    add!(bar_ψ2, z_bar_Φ2, -1.0)
+
+    outer_z_bar_Φ2 = z_conj_diff(ϕ2, r_outer)
+    outer_bar_ψ2 = reconjugate(bar_ψ2, r_inner, r_outer)
+
+    PlaneLayer(E2, ν2, prev_layer.r_outer, r_outer, ϕ2, 
+                z_bar_Φ2, bar_ψ2, outer_z_bar_Φ2, outer_bar_ψ2)
 end
-
-function forces(layer::PlaneLayer)
-    force = similar(layer.ϕ)
-
-    add!(force, layer.ϕ,       +1.0)
-    add!(force, layer.z_bar_Φ, -1.0)
-    add!(force, layer.bar_ψ,   -1.0)
-
-    return force
-end
-
-#######################################
-
-struct PlaneFiber
-    layers ::Vector{PlaneLayer}
-end
-
-struct PlaneFiber_Displacements <: Fiber{PlaneProblem}
-    fiber ::PlaneFiber
-end
-
-struct PlaneFiber_Forces <: Fiber{PlaneProblem}
-    fiber ::PlaneFiber
-end
-
-=#
-
-#=
-using ..Symbolic: Polynomial, max_abs_index, add!
-
-struct Layer
-    E::Float64
-    ν::Float64
-
-    ϕ         ::Polynomial
-    z_bar_Phi ::Polynomial
-    bar_ψ     ::Polynomial
-end
-
-function fill_slae!(layer::Layer, slae) 
-    ϕ = layer.ϕ
-    ψ = layer.ψ
-
-    E = layer.E
-    ν = layer.ν
-    G = E / (2.0*(1.0+ν))
-    κ = 3.0-4.0*ν
-    
-    max_index = maximum(max_abs_index(ϕ), max_abs_index(ψ))
-    displacements = Polynomial(-max_index : max_index)
-    stresses      = Polynomial(-max_index : max_index)
-    
-    add_plain!(displacements, ϕ, κ/G)
-    add_z_conj_diff!(displacements, ϕ, -1.0/G)
-    add_conj!(displacements, ψ, -1.0/G)
-
-    add_plain!(stresses, ϕ)
-    add_z_conj_diff!(stresses, ϕ)
-    add_conj!(stresses, ψ)
-
-    # TODO fill slae
-end
-
-struct Fiber
-    layers ::Vector{Layer}
-end
-
-function fill_slae!(fiber::Fiber, slae) 
-    fill_slae!(fiber.layers[end], slae) 
-end
-
-struct Cohesive
-
-end
-
-struct PlaneProblem
-    fibers    ::Dict{Pole, Fiber}
-    cohesive  ::Cohesive
-
-    slae_rows ::Dict{Pole, UnitRange{Int64}}
-    slae_left ::Matrix{Float64}
-    slae_right::Vector{Float64}
-end
-
-function PlaneProblem(cell::CellData) 
-    # TODO
-end
-
-function fill_slae!(cohesive::Cohesive, pole::Pole, slae) 
-    # TODO
-end
-
-function fill_slae!(plane_problem::PlaneProblem)
-    slae_left = plane_problem.slae_left
-    rows = plane_problem.slae_rows
-
-    for pole in keys(plane_problem.fibers)
-        slae_view = view(slae_left[rows[pole]])
-        fill_slae!(plane_problem.fibers[pole], slae_view)
-        fill_slae!(plane_problem.cohesive, pole, slae_view)
-    end
-
-    # TODO averaging
-end
-
-=#
 
 end # module PlaneProblems
