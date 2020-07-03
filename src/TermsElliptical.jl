@@ -271,3 +271,7 @@ function add_term_series!(output::BoundedVector{ComplexF64},
         output[0+power_shift] += term.num_factor * factor
     end
 end
+
+###############################################################################
+
+const EllipticalSolution = VarLinForm{EllipticalTerm}

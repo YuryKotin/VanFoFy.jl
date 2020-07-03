@@ -200,7 +200,7 @@ function z_conj_diff(term::PolynomialTerm, conj_r::Float64) ::PolynomialTerm
 end
 
 """
-    add!(dest::PolynomialTerm, source::PolynomialTerm, factor::ComplexF64)
+    add!(dest::PolynomialTerm, source::PolynomialTerm, factor)
 
 Сложение двух нормированных полиномов. dest += source * factor.
 
@@ -244,6 +244,7 @@ function add_term_series!(  output::BoundedVector{ComplexF64},
 end
 
 ###############################################################################
+
 "
 Линейно-полиномиальная форма вида
 ``v_1 P_1(z) + ... +  v_N P_N(z)``,
