@@ -58,17 +58,37 @@ not_cashed(v::CashedVector{N}, ind::Int) where N = (ind > v.last_cashed)
 
 ###############################################################################
 
-struct BoundedVector{T <: Number}
+mutable struct BoundedVector{T <: Number}
     vector ::OffsetArray{T, 1, Array{T, 1}}
+    bottom ::Int
+    top    ::Int
+    function BoundedVector{T}(indices::UnitRange{Int}) where T <: Number
+        n_ind = size(indices, 1)
+        vector = OffsetVector(zeros(T, n_ind), indices)
+        new{T}(vector, first(indices), last(indices))
+    end
 end
 
-function BoundedVector{T}(indices::UnitRange{Int}) where T <: Number
-    vector = OffsetVector{T}(undef, indices)
-    BoundedVector{T}(vector)
+
+function set_bounds!(bv::BoundedVector{T}, bottom::Int, top::Int) where T
+    if top < bottom
+        error("Верхняя граница меньше нижней")
+    end
+    if bottom < firstindex(bv.vector)
+        error("Нижняя граница выходит за границы массива")
+    end
+    if top > lastindex(bv.vector)
+        error("Верхняя граница выходит за границы массива")
+    end
+
+    bv.bottom = bottom
+    bv.top    = top
+
+    return
 end
 
 function Base.getindex(bv::BoundedVector{T}, key::Int) where T
-    if key in axes(bv.vector, 1)
+    if bv.bottom <= key <= bv.top
         @inbounds return bv.vector[key]
     else
         return zero(T)
@@ -76,14 +96,20 @@ function Base.getindex(bv::BoundedVector{T}, key::Int) where T
 end
 
 function Base.setindex!(bv::BoundedVector{T}, val::T, key::Int) where T
-    if key in axes(bv.vector, 1)
+    if bv.bottom <= key <= bv.top
         @inbounds bv.vector[key] = val
     end
 end
 
-Base.lastindex(bv::BoundedVector{T}) where T = lastindex(bv.vector)
+Base.firstindex(bv::BoundedVector{T}) where T = bv.bottom
+Base.lastindex(bv::BoundedVector{T}) where T  = bv.top
+Base.eachindex(bv::BoundedVector{T}) where T  = bv.bottom : bv.top
 
-Base.fill!(bv::BoundedVector{T}, val::T) where T = fill!(bv.vector, val)
+function Base.fill!(bv::BoundedVector{T}, val::T) where T 
+    for i in eachindex(bv)
+        bv.vector[i] = val
+    end
+end
 
 ###############################################################################
 
@@ -95,7 +121,7 @@ Base.getindex(form::VarLinForm, ind::Int) = getindex(form.terms, ind)
 Base.similar(form::VarLinForm) = VarLinForm(similar(form.terms))
 Base.firstindex(form::VarLinForm) = firstindex(form.terms)
 Base.lastindex(form::VarLinForm) = lastindex(form.terms)
-Base.eachindex(form::VarLinForm) = eachindex(form.terms)
+Base.eachindex(form::VarLinForm) = firstindex(form.terms) : lastindex(form.terms)
 Base.axes(form::VarLinForm, d) = axes(form.terms, d)
 
 ###############################################################################

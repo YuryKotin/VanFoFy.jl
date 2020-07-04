@@ -10,18 +10,20 @@ struct PolynomialTerm <: FunctionalTerm
     PolynomialTerm(coeffs::ComplexOffsetVector, norm_r::Float64) = new(coeffs, norm_r)
     "Конструктор"
     function PolynomialTerm(ind::UnitRange, norm_r::Float64)
-        coeffs = OffsetVector{ComplexF64}(undef, ind)
-        fill!(coeffs, 0.0im)
+        n_ind = size(ind, 1)
+        coeffs = OffsetVector( zeros(ComplexF64, n_ind), ind)
         new(coeffs, norm_r)
     end
 end
 
-Base.getindex(term::PolynomialTerm, i::Int) = getindex(term.coeffs, i)
+Base.getindex(term::PolynomialTerm, i::Int) = term.coeffs[i]
 Base.setindex!(term::PolynomialTerm, val::ComplexF64, i::Int) = setindex!(term.coeffs, val, i)
 Base.firstindex(term::PolynomialTerm) = firstindex(term.coeffs)
 Base.lastindex(term::PolynomialTerm) = lastindex(term.coeffs)
-Base.eachindex(term::PolynomialTerm) = eachindex(term.coeffs)
-Base.similar(term::PolynomialTerm) = PolynomialTerm(similar(term.coeffs), term.norm_r)
+Base.eachindex(term::PolynomialTerm) = firstindex(term.coeffs) : lastindex(term.coeffs)
+function Base.similar(term::PolynomialTerm) 
+    PolynomialTerm(eachindex(term), term.norm_r)
+end
 
 """
     differentiate(term :: PolynomialTerm) ::PolynomialTerm

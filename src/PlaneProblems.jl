@@ -6,13 +6,13 @@
 
 module PlaneProblems
 
-using ..Types: VarLinForm, BoundedVector
+using ..Types: VarLinForm, BoundedVector, RationalComplex
 using ..FunctionalTerms: PolynomialTerm, PolynomialSolution
 using ..FunctionalTerms: EllipticalSolution
 using ..FunctionalTerms: z_conj_diff, conjugate, reconjugate, add!
 using ..FunctionalTerms: EllipticPraecursor, EllipticalTerm
 using ..FunctionalTerms: WeierstrassTerm, QSpecialTerm, ZTerm, ConstTerm
-using ..FunctionalTerms: differentiate
+using ..FunctionalTerms: differentiate, add_term_series!
 using ..Input: LayerData, InclusionData
 
 using OffsetArrays
@@ -246,7 +246,7 @@ struct PlaneCohesive
     
         n_B_vars = 2
         for incl in inclusions
-            n_B_vars += (incl.max_power + 2) * 2
+            n_B_vars += incl.max_power * 2
         end
     
         B_inds = first_index : first_index + n_B_vars - 1
@@ -274,14 +274,11 @@ struct PlaneCohesive
     
         ϕ = EllipticalSolution(ϕ_terms)
     
-        Φ = EllipticalSolution(
-            OffsetVector(
-                [
-                    differentiate(ϕ_terms[b]) for b in B_inds
-                ],
-                B_inds
-            )
+        Φ_terms = OffsetVector(
+            [ differentiate(ϕ_terms[b]) for b in B_inds ],
+            B_inds
         )
+        Φ = VarLinForm(Φ_terms)
         
         C_var = B_var
         n_C_vars = n_B_vars
@@ -319,5 +316,107 @@ struct PlaneCohesive
     end
 end
 
+function forces_series!(
+    output, 
+    cohesive::PlaneCohesive,
+    pole::RationalComplex,
+    norm_r::Float64,
+    var::Int
+)
+    R = norm_r
+
+    ϕ = cohesive.ϕ[var]
+    Φ = cohesive.Φ[var]
+    ψ = cohesive.ψ[var]
+
+    fill!(output, 0.0im)
+    
+    # ϕ 
+    add_term_series!(
+        output,
+        ϕ,
+        point=pole,
+        factor=1.0+0.0im,
+        norm_r=R,
+        praecursor = cohesive.praesursor
+    )
+
+    # z bar Φ
+    add_term_series!(
+        output,
+        Φ,
+        point=pole,
+        factor=R+0.0im,
+        norm_r=R,
+        power_shift=1,
+        conjugated=true,
+        praecursor = cohesive.praesursor
+    )
+
+    # bar ψ
+    add_term_series!(
+        output,
+        ψ,
+        point=pole,
+        factor=1.0+0.0im,
+        norm_r=R,
+        conjugated=true,
+        praecursor = cohesive.praesursor
+    )
+end
+
+function displacement_series!(
+    output, 
+    cohesive::PlaneCohesive,
+    pole::RationalComplex,
+    norm_r::Float64,
+    var::Int
+)
+    E = cohesive.E
+    ν = cohesive.ν
+    G = E/(2*(1+ν))
+    κ = 3 - 4ν
+
+    R = norm_r
+
+    ϕ = cohesive.ϕ[var]
+    Φ = cohesive.Φ[var]
+    ψ = cohesive.ψ[var]
+
+    fill!(output, 0.0im)
+    
+    # ϕ 
+    add_term_series!(
+        output,
+        ϕ,
+        point=pole,
+        factor=(κ+0.0im)/(2G),
+        norm_r=R,
+        praecursor = cohesive.praesursor
+    )
+
+    # z bar Φ
+    add_term_series!(
+        output,
+        Φ,
+        point=pole,
+        factor=-(R+0.0im)/(2G),
+        norm_r=R,
+        power_shift=1,
+        conjugated=true,
+        praecursor = cohesive.praesursor
+    )
+
+    # bar ψ
+    add_term_series!(
+        output,
+        ψ,
+        point=pole,
+        factor=-(1.0+0.0im)/(2G),
+        norm_r=R,
+        conjugated=true,
+        praecursor = cohesive.praesursor
+    )
+end
 
 end # module PlaneProblems

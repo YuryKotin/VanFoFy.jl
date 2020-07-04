@@ -2,6 +2,8 @@ module TestPlaneProblems
 
 using Test
 
+using ..Common: my_isapprox, coincede_indices
+
 using VanFoFy.PlaneProblems: PlaneLayer, add!, PlaneFiber
 using VanFoFy.PlaneProblems: forces_series!, displacements_series!
 using VanFoFy.Input: LayerData, InclusionData
@@ -49,11 +51,7 @@ function test1()
         add!(ref_form2, z_bar_Φ2, -1.0/G2+0.0im)
         add!(ref_form2, bar_ψ2,   -1.0/G2+0.0im)
 
-        for v in eachindex(ref_form1)
-            for p in eachindex(ref_form1[v])
-                @test ref_form1[v][p] ≈ ref_form2[v][p]
-            end
-        end
+        @test my_isapprox(ref_form1, ref_form2, atol=1e-14)
 
         ref_form2_outer = similar(layer2.ϕ)
 
@@ -81,17 +79,7 @@ function test1()
         add!(ref_form3, z_bar_Φ3, -1.0/G3+0.0im)
         add!(ref_form3, bar_ψ3,   -1.0/G3+0.0im)
 
-        for v in eachindex(ref_form3)
-            for p in eachindex(ref_form3[v])
-                if ref_form2_outer[v][p] == NaN + NaN*im
-                    println("2", v, p)
-                end
-                if ref_form3[v][p] == NaN + NaN*im
-                    println("3", v, p)
-                end
-                @test ref_form2_outer[v][p] ≈ ref_form3[v][p] atol=1e-14
-            end
-        end
+        @test my_isapprox(ref_form2_outer, ref_form3, atol=1e-14)
     end
 end
 
@@ -107,28 +95,16 @@ function test2()
         var_indices = 10:21
         fiber = PlaneFiber(layers_data, var_indices)
         
-        for v in var_indices
-            @test firstindex(fiber[1].ϕ[v]) == firstindex(fiber[1].inner_z_bar_Φ[v])   
-            @test firstindex(fiber[1].ϕ[v]) == firstindex(fiber[1].outer_z_bar_Φ[v])
-            @test firstindex(fiber[1].ϕ[v]) == firstindex(fiber[1].inner_bar_ψ[v])
-            @test firstindex(fiber[1].ϕ[v]) == firstindex(fiber[1].outer_bar_ψ[v])      
-        end
+        @test coincede_indices(fiber[1].ϕ, fiber[1].inner_z_bar_Φ)
+        @test coincede_indices(fiber[1].ϕ, fiber[1].outer_z_bar_Φ)
+        @test coincede_indices(fiber[1].ϕ, fiber[1].inner_bar_ψ)
+        @test coincede_indices(fiber[1].ϕ, fiber[1].outer_bar_ψ)
         for l in firstindex(fiber)+1 : lastindex(fiber)
-            layer1 = fiber[l-1]
-            layer2 = fiber[l]
-            for v in var_indices
-                @test firstindex(layer1.ϕ[v])             == firstindex(layer2.ϕ[v])
-                @test firstindex(layer1.inner_z_bar_Φ[v]) == firstindex(layer2.inner_z_bar_Φ[v])
-                @test firstindex(layer1.inner_bar_ψ[v])   == firstindex(layer2.inner_bar_ψ[v])
-                @test firstindex(layer1.outer_z_bar_Φ[v]) == firstindex(layer2.outer_z_bar_Φ[v])
-                @test firstindex(layer1.outer_bar_ψ[v])   == firstindex(layer2.outer_bar_ψ[v])
-                
-                @test lastindex(layer1.ϕ[v])             == lastindex(layer2.ϕ[v])
-                @test lastindex(layer1.inner_z_bar_Φ[v]) == lastindex(layer2.inner_z_bar_Φ[v])
-                @test lastindex(layer1.inner_bar_ψ[v])   == lastindex(layer2.inner_bar_ψ[v])
-                @test lastindex(layer1.outer_z_bar_Φ[v]) == lastindex(layer2.outer_z_bar_Φ[v])
-                @test lastindex(layer1.outer_bar_ψ[v])   == lastindex(layer2.outer_bar_ψ[v])
-            end
+            @test coincede_indices(fiber[l-1].ϕ,             fiber[l].ϕ)
+            @test coincede_indices(fiber[l-1].inner_z_bar_Φ, fiber[l].inner_z_bar_Φ)
+            @test coincede_indices(fiber[l-1].inner_bar_ψ,   fiber[l].inner_bar_ψ)
+            @test coincede_indices(fiber[l-1].outer_z_bar_Φ, fiber[l].outer_z_bar_Φ)
+            @test coincede_indices(fiber[l-1].outer_bar_ψ,   fiber[l].outer_bar_ψ)
         end      
 
         for l in firstindex(fiber)+1 : lastindex(fiber)
@@ -171,12 +147,8 @@ function test2()
             add!(force_form2, z_bar_Φ2, 1.0+0.0im)
             add!(force_form2, bar_ψ2,   1.0+0.0im)
 
-            for v in eachindex(displ_form1)
-                for p in eachindex(displ_form1[v])
-                    @test displ_form1[v][p] ≈ displ_form2[v][p] atol=1e-14
-                    @test force_form1[v][p] ≈ force_form2[v][p] atol=1e-14
-                end
-            end
+            @test my_isapprox(displ_form1, displ_form2, atol=1e-14)
+            @test my_isapprox(force_form1, force_form2, atol=1e-14)
         end
     end
 end
@@ -210,10 +182,7 @@ function test3()
         output = similar(ϕ[end])
         for v in var_indices
             displacements_series!(output, fiber, v)
-            term = displ_form[v]
-            for p in eachindex(output)
-                @test term[p] ≈ output[p] atol=1e-10
-            end
+            @test my_isapprox(displ_form[v], output, atol=1e-10)
         end
 
         force_form = similar(ϕ)
@@ -222,25 +191,29 @@ function test3()
         add!(force_form, bar_ψ,   1.0)
         for v in var_indices
             forces_series!(output, fiber, v)
-            term = force_form[v]
-            for p in eachindex(output)
-                @test term[p] ≈ output[p] atol=1e-10
+            if ! my_isapprox(force_form[v], output, atol=1e-10)
+                println(v)
             end
+            @test my_isapprox(force_form[v], output, atol=1e-10)
         end
     end 
 end
 
 function test4()
-    lattice = Lattice(1.0+0.0im, exp(1.0im))
-    praecursor = EllipticPraecursor(lattice, 20)
-    inclusions = [
-        InclusionData(1//5+1//5im, 0.1, 10),
-        InclusionData(4//5+4//5im, 0.1, 10),
-        InclusionData(1//2+1//2im, 0.1, 10)
-    ]
-    E = 10.0
-    ν = 0.3
-    cohesive = PlaneCohesive(E, ν, inclusions, 43, praecursor)
+    @testset "Cohesive" begin
+        lattice = Lattice(1.0+0.0im, exp(1.0im))
+        praecursor = EllipticPraecursor(lattice, 20)
+        inclusions = [
+            InclusionData(1//5+1//5im, 0.1, 10),
+            InclusionData(4//5+4//5im, 0.1, 10),
+            InclusionData(1//2+1//2im, 0.1, 10)
+        ]
+        E = 10.0
+        ν = 0.3
+        first_index = 43 
+        cohesive = PlaneCohesive(E, ν, inclusions, first_index, praecursor)
+    end
+
 end
 
 function test()

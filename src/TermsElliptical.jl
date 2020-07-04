@@ -102,7 +102,7 @@ differentiate(term::ConstTerm) = ConstTerm(0.0im)
 
 # Arguments
 
-- `output::BoundedVector{ComplexF64}`: контейнер полинома; выход за границы не проверяется
+- `output`: контейнер полинома; выход за границы не проверяется
 - `term<:EllipticalTerm`: эллиптическое слагаемое
 - `point::RationalComplex`: точка, относительно которой слагаемое раскладывается в ряд
 - `factor::ComplexF64=1.0+0.0im`: множитель
@@ -111,7 +111,7 @@ differentiate(term::ConstTerm) = ConstTerm(0.0im)
 - `conjugated::Bool = false`: флаг комплексного сопряжения
 - `praecursor::EllipticPraecursor`: экземпляр эллиптических функций
 """
-function add_term_series!(output       ::BoundedVector{ComplexF64}, 
+function add_term_series!(  output, 
                             term       ::WeierstrassTerm; 
                             point      ::RationalComplex,
                             factor     ::ComplexF64 = 1.0+0.0im, 
@@ -182,7 +182,7 @@ end
 
 #######################################
 
-function add_term_series!(output::BoundedVector{ComplexF64}, 
+function add_term_series!(output, 
                         term       ::QSpecialTerm; 
                         point      ::RationalComplex, 
                         factor     ::ComplexF64 = 1.0+0.0im, 
@@ -237,7 +237,7 @@ end
 
 #######################################
 
-function add_term_series!(output::BoundedVector{ComplexF64}, 
+function add_term_series!(output, 
                         term       ::ZTerm; 
                         point      ::RationalComplex, 
                         factor     ::ComplexF64 = 1.0+0.0im, 
@@ -257,7 +257,7 @@ end
 
 #######################################
 
-function add_term_series!(output::BoundedVector{ComplexF64}, 
+function add_term_series!(output, 
                         term       ::ConstTerm; 
                         point      ::RationalComplex, 
                         factor     ::ComplexF64 = 1.0+0.0im, 

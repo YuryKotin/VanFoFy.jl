@@ -1,5 +1,7 @@
 module TestSymbolic
 
+using ..Common: my_isapprox
+
 using Test, OffsetArrays
 #using VanFoFy.Symbolic: VarLinForm, variables, add!, add_conjugated!, mul!
 using VanFoFy.FunctionalTerms: EllipticalTerm, differentiate
@@ -7,6 +9,7 @@ using VanFoFy.FunctionalTerms: WeierstrassTerm, QSpecialTerm, ZTerm, ConstTerm
 using VanFoFy.FunctionalTerms: add_term_series!, fill!
 using VanFoFy.FunctionalTerms: EllipticPraecursor
 using VanFoFy.Types: raw_complex, Lattice, differentiate!, BoundedVector
+using VanFoFy.Types: set_bounds!
 using VanFoFy.FunctionalTerms: PolynomialTerm, conjugate, z_conj_diff
 
 function test()
@@ -47,11 +50,12 @@ function test()
         terms[10] = QSpecialTerm(4, 0, -1.2-1.1im, r)
 
         coeffs = BoundedVector{ComplexF64}(-10:10)
-        fill!(coeffs, 0.0im)
 
         #######################################################################
         ## Прямое вычисление разложения в ряд вне полюса
         #######################################################################
+
+        set_bounds!(coeffs, 0, 10)
 
         for t in terms
             add_term_series!(coeffs, t, point=rz, norm_r=R, praecursor=el_praecursor)
@@ -70,9 +74,10 @@ function test()
             -0.0038736571822559321028 + 0.0055077190841060601201im, 
             -0.0007291294268571879610 - 0.0038700821595215768867im], 0:10)
         
-        for n in 0:10
-            @test coeffs[n] ≈ ref_array[n]
-        end
+        @test my_isapprox(coeffs, ref_array, atol=1e-14)
+
+        set_bounds!(coeffs, -10, 10)
+
 
         #######################################################################
         ## Прямое вычисление разложения в ряд около полюса
