@@ -385,38 +385,53 @@ function displacement_series!(
 
     fill!(output, 0.0im)
     
-    # ϕ 
+    add!(f, factor; power_shift=1, conjugated=true) = 
     add_term_series!(
-        output,
-        ϕ,
-        point=pole,
-        factor=(κ+0.0im)/(2G),
+        output, 
+        f, 
+        point=pole, 
+        factor=complex(factor),
         norm_r=R,
-        praecursor = cohesive.praesursor
-    )
+        power_shift=power_shift,
+        conjugated=conjugated,
+        praecursor=cohesive.praesursor)
+
+    # ϕ 
+    add!(ϕ, κ/(2G))
+    # add_term_series!(
+    #     output,
+    #     ϕ,
+    #     point=pole,
+    #     factor=(κ+0.0im)/(2G),
+    #     norm_r=R,
+    #     praecursor = cohesive.praesursor
+    # )
 
     # z bar Φ
-    add_term_series!(
-        output,
-        Φ,
-        point=pole,
-        factor=-(R+0.0im)/(2G),
-        norm_r=R,
-        power_shift=1,
-        conjugated=true,
-        praecursor = cohesive.praesursor
-    )
+    add!(Φ, -R/(2G), power_shift=1, conjugated=true)
+    # add_term_series!(
+    #     output,
+    #     Φ,
+    #     point=pole,
+    #     factor=-(R+0.0im)/(2G),
+    #     norm_r=R,
+    #     power_shift=1,
+    #     conjugated=true,
+    #     praecursor = cohesive.praesursor
+    # )
 
     # bar ψ
-    add_term_series!(
-        output,
-        ψ,
-        point=pole,
-        factor=-(1.0+0.0im)/(2G),
-        norm_r=R,
-        conjugated=true,
-        praecursor = cohesive.praesursor
-    )
+    add!(ψ, -1/(2G), conjugated=true)
+    # add_term_series!(
+    #     output,
+    #     ψ,
+    #     point=pole,
+    #     factor=-(1.0+0.0im)/(2G),
+    #     norm_r=R,
+    #     conjugated=true,
+    #     praecursor = cohesive.praesursor
+    # )
+    
 end
 
 end # module PlaneProblems
