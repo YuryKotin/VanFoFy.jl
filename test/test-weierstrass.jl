@@ -1,7 +1,8 @@
 module TestWeierstrass
 
 using Test, OffsetArrays
-using VanFoFy.Types: Lattice, raw_complex, BoundedVector
+using VanFoFy.Testing: my_isapprox
+using VanFoFy.Types: Lattice, raw_complex, BoundedVector, set_bounds!
 using VanFoFy.SpecialWeierstrass: Weierstrass
 using VanFoFy.SpecialQ: QSpecial
 using VanFoFy.FunctionalTerms: WeierstrassTerm, add_term_series!
@@ -31,8 +32,7 @@ function test()
         abs_z = abs(z)
 
         ref_array = OffsetVector(
-                [0.10922980957434628990 - 0.71842740909634417168im,
-                -0.8598534582241565 + 0.7026363517078360im,
+                [-0.8598534582241565 + 0.7026363517078360im,
                 -0.0639302522525613 - 1.2338575450881468im,
                 0.315957874556992 + 1.608024389830146im,
                 -1.432308324486529 + 0.345694829053258im,
@@ -44,13 +44,16 @@ function test()
                 2.077985541274223 - 2.171576392262631im,
                 0.162780226883512 + 3.098964550714613im,
                 -2.479278381517072 - 2.856788007534111im],
-                -2:10)
+                -1:10)
         for n in 1:10  ref_array[n] *= (n+1)  end
-        for n in -2:10  ref_array[n] *= (abs_z^(n+2))  end
+        for n in -1:10  ref_array[n] *= (abs_z^(n+2))  end
 
-        for n in 10:-1:-1
-            @test wei[rz, n] ≈ ref_array[n] atol=1e-10
-        end
+        wei_array = OffsetVector(
+            [ wei[rz, n] for n in -1:10 ],
+            -1:10
+        )
+        @test my_isapprox(wei_array, ref_array, atol=1e-10)
+        
     end
 
     @testset "Weierstrass series expansions" begin
@@ -58,7 +61,7 @@ function test()
         R = 0.44 * abs(z)
     
         coeffs = BoundedVector{ComplexF64}(-10:10)
-        fill!(coeffs, 0.0im)
+        set_bounds!(coeffs, 0, 10)
 
         term = WeierstrassTerm(0, 0, 1.0+0.0im, r)
 
@@ -78,9 +81,8 @@ function test()
                 -0.00028031967035285472543 - 0.00032300280537675245263im],
             0:10
         )
-        for n in 0:10
-            @test coeffs[n] ≈ ref_series_0[n]
-        end
+
+        @test my_isapprox(coeffs, ref_series_0, atol=1e-10)
 
         fill!(coeffs, 0.0im)
         term_4 = WeierstrassTerm(4, 0, 1.0+0.0im, r)
@@ -101,9 +103,7 @@ function test()
             0:10
         )
 
-        for n in 0:10
-            @test coeffs[n] ≈ ref_series_4[n]
-        end
+        @test my_isapprox(coeffs, ref_series_4, atol=1e-10)
 
         fill!(coeffs, 0.0im)
         term_m1 = WeierstrassTerm(-1, 0, 1.0+0.0im, r)
@@ -124,9 +124,8 @@ function test()
             0:10
         )
 
-        for n in 0:10
-            @test coeffs[n] ≈ ref_series_m1[n]
-        end
+        @test my_isapprox(coeffs, ref_series_m1, atol=1e-10)
+        
     end
 
     @testset "Weierstrass series expansions at pole" begin
@@ -134,8 +133,7 @@ function test()
     r = 1.0
     R = 1.0
 
-    coeffs = BoundedVector{ComplexF64}(-10:10)
-    fill!(coeffs, 0.0im)
+    coeffs = BoundedVector{ComplexF64}(0:10)
 
     term = WeierstrassTerm(0, 0, 1.0+0.0im, r)
 
@@ -155,9 +153,8 @@ function test()
             0.018471565761370376530 + 0.005375340001129344245im],
         0:10
     )
-    for n in 0:10
-        @test coeffs[n] ≈ ref_series_0[n]
-    end
+
+    @test my_isapprox(coeffs, ref_series_0, atol=1e-10)
 
     #######################################################################
 
@@ -186,9 +183,7 @@ function test()
         0:10
     )
     
-    for n in 0:10
-        @test coeffs[n] ≈ ref_series_1[n]
-    end
+    @test my_isapprox(coeffs, ref_series_1, atol=1e-10)
 
     fill!(coeffs, 0.0im)
     term_4 = WeierstrassTerm(4, 0, 1.0+0.0im, r)
@@ -209,9 +204,7 @@ function test()
         0:10
     )
 
-    for n in 0:10
-        @test coeffs[n] ≈ ref_series_4[n]
-    end
+    @test my_isapprox(coeffs, ref_series_4, atol=1e-10)
 
     fill!(coeffs, 0.0im)
     term_m1 = WeierstrassTerm(-1, 0, 1.0+0.0im, r)
@@ -232,9 +225,7 @@ function test()
         0:10
     )
 
-    for n in 0:10
-        @test coeffs[n] ≈ ref_series_m1[n]
-    end
+    @test my_isapprox(coeffs, ref_series_m1, atol=1e-10)
 
     end
 end

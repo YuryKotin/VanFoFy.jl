@@ -1,9 +1,8 @@
 module TestSymbolic
 
-using ..Common: my_isapprox
-
 using Test, OffsetArrays
 #using VanFoFy.Symbolic: VarLinForm, variables, add!, add_conjugated!, mul!
+using VanFoFy.Testing: my_isapprox
 using VanFoFy.FunctionalTerms: EllipticalTerm, differentiate
 using VanFoFy.FunctionalTerms: WeierstrassTerm, QSpecialTerm, ZTerm, ConstTerm
 using VanFoFy.FunctionalTerms: add_term_series!, fill!
@@ -13,16 +12,6 @@ using VanFoFy.Types: set_bounds!
 using VanFoFy.FunctionalTerms: PolynomialTerm, conjugate, z_conj_diff
 
 function test()
-    @testset "SymbolicSolution" begin
-        ss = OffsetVector{EllipticalTerm}(undef, 10:20)
-
-        ss[15] = WeierstrassTerm(0.0im, 1.0+0.0im, 1.0, 1)
-        @test ss[15] isa WeierstrassTerm
-
-        ss[14] = QSpecialTerm(0.0im, 1.0+0.0im, 1.0, 1)
-        @test ss[14] isa QSpecialTerm
-    end
-
     @testset "Ellipticals complex computing check" begin
         ω1 = complex(1.0)
         ω3 = exp(1im)
@@ -112,10 +101,8 @@ function test()
             7.0521018963742516541e-7 + 5.6633260146421892289e-7im, 
             8.674543643826683132e-8 - 3.8645070169601710868e-7im], -10:10)
 
-        for n in -10:10
-            @test coeffs[n] ≈ ref_array[n]
-        end
-
+        @test my_isapprox(coeffs, ref_array, atol=1e-10)
+        
         #######################################################################
         ## Разложения в ряд производной вне полюса
         #######################################################################
@@ -154,10 +141,8 @@ function test()
             -0.018447385973376157625 - 0.097915262662077659495im, 
             0.048385277643970804606 + 0.046418708590132078118im], 
             -10:10)
-    
-        for n in -10:10
-            @test coeffs[n] ≈ ref_array[n]
-        end
+        
+        @test my_isapprox(coeffs, ref_array, atol=1e-10)
         
         #######################################################################
         ## Разложения в ряд производной около полюса
@@ -192,11 +177,9 @@ function test()
             2.1947084954494754229e-6 - 9.7774208409021146283e-6im,
             4.8082636354407545414e-7 - 2.7620103491109986283e-7im], 
             -10:10)
-    
-        for n in -10:10
-            @test coeffs[n] ≈ ref_array[n]
-        end
-
+        
+        @test my_isapprox(coeffs, ref_array, atol=1e-10)
+        
         #######################################################################
         ## Комплексное сопряжение разложения в ряд производной вне полюса
         #######################################################################
@@ -231,10 +214,8 @@ function test()
             0.0im, 
             0.0im], -10:10)
 
-        for n in -10:10
-            @test coeffs[n] ≈ ref_array[n]
-        end
-
+        @test my_isapprox(coeffs, ref_array, atol=1e-10)
+        
         #######################################################################
         ## Комплексное сопряжение разложения в ряд производной около полюса
         #######################################################################
@@ -269,10 +250,8 @@ function test()
             0.0im, 
             0.0im], -10:10)
 
-        for n in -10:10
-            @test coeffs[n] ≈ ref_array[n]
-        end
-
+        @test my_isapprox(coeffs, ref_array, atol=1e-10)
+        
         #######################################################################
         ##Умноженное на z комплексное сопряжение разложения в ряд производной около полюса
         #######################################################################
@@ -311,10 +290,8 @@ function test()
             0.0im, 
             0.0im], -10:10)
 
-        for n in -10:10
-            @test coeffs[n] ≈ ref_array[n] atol=1e-14
-        end
-
+        @test my_isapprox(coeffs, ref_array, atol=1e-10)
+        
         #######################################################################
         ##Умноженное на z комплексное сопряжение разложения в ряд производной вне полюса
         #######################################################################
@@ -352,11 +329,9 @@ function test()
             0.0im, 
             0.0im, 
             0.0im], -10:10)
-
-        for n in -10:10
-            @test coeffs[n] ≈ ref_array[n] atol=1e-14
-        end
-
+        
+        @test my_isapprox(coeffs, ref_array, atol=1e-10)
+        
         #######################################################################
         ## Имитация выражения ϕ(z) + z bar Φ(z) вне полюса
         #######################################################################
@@ -400,9 +375,7 @@ function test()
             -0.0038736571822559321028 + 0.0055077190841060601201im, 
             -0.0007291294268571879610 - 0.0038700821595215768867im], -10:10)
 
-        for n in -10:10
-            @test coeffs[n] ≈ ref_array[n] atol=1e-14
-        end
+        @test my_isapprox(coeffs, ref_array, atol=1e-10)
 
         #######################################################################
         ## Имитация выражения ϕ(z) + z bar Φ(z) около полюса
@@ -447,9 +420,7 @@ function test()
             7.0521018963742516541e-7 + 5.6633260146421892289e-7im,
             8.674543643826683132e-8 - 3.8645070169601710868e-7im], -10:10)
 
-        for n in -10:10
-            @test coeffs[n] ≈ ref_array[n] atol=1e-14
-        end
+    @test my_isapprox(coeffs, ref_array, atol=1e-10)
 
     end
 
@@ -469,9 +440,7 @@ function test()
 
         ref_coeffs = OffsetVector([(1.0+0.0im)*(n+1) for n in d_bottom:d_top], d_bottom:d_top)
 
-        for i in eachindex(d_poly)
-            @test d_poly[i] ≈ ref_coeffs[i]
-        end
+        @test my_isapprox(d_poly, ref_coeffs, atol=1e-10)
 
         ################
 
@@ -485,14 +454,9 @@ function test()
         d_bottom = 0
         d_top = 2
 
-        @test firstindex(d_poly) == d_bottom
-        @test lastindex(d_poly)  ==  d_top
-
         ref_coeffs = OffsetVector([(1.0+0.0im)*(n+1) for n in d_bottom:d_top], d_bottom:d_top)
 
-        for i in eachindex(d_poly)
-            @test d_poly[i] ≈ ref_coeffs[i]
-        end
+        @test my_isapprox(d_poly, ref_coeffs, atol=1e-10)
 
         ################
 
@@ -506,14 +470,9 @@ function test()
         d_bottom = -4
         d_top = -2
 
-        @test firstindex(d_poly) == d_bottom
-        @test lastindex(d_poly)  ==  d_top
-
         ref_coeffs = OffsetVector([(1.0+0.0im)*(n+1) for n in d_bottom:d_top], d_bottom:d_top)
 
-        for i in eachindex(d_poly)
-            @test d_poly[i] ≈ ref_coeffs[i]
-        end
+        @test my_isapprox(d_poly, ref_coeffs, atol=1e-10)
 
         ################
 
@@ -527,15 +486,10 @@ function test()
         d_bottom = 0
         d_top = 0
 
-        @test firstindex(d_poly) == d_bottom
-        @test lastindex(d_poly)  ==  d_top
-
         ref_coeffs = OffsetVector([0.0im for n in d_bottom:d_top], d_bottom:d_top)
 
-        for i in eachindex(d_poly)
-            @test d_poly[i] ≈ ref_coeffs[i]
-        end
-
+        @test my_isapprox(d_poly, ref_coeffs, atol=1e-10)
+        
     end
 
     @testset "Polynomials, conjugate" begin
@@ -549,15 +503,10 @@ function test()
         c_bottom = -3
         c_top = 5
 
-        @test firstindex(c_poly) == c_bottom
-        @test lastindex(c_poly)  ==  c_top
-
         ref_coeffs = OffsetVector([(1.0-1.0im) for n in c_bottom:c_top], c_bottom:c_top)
 
-        for i in eachindex(c_poly)
-            @test c_poly[i] ≈ ref_coeffs[i]
-        end
-
+        @test my_isapprox(c_poly, ref_coeffs, atol=1e-10)
+        
     end
 
     @testset "Polynomials, z_conj_diff" begin
@@ -578,21 +527,21 @@ function test()
 
         z_poly = z_conj_diff(poly, 1.0)
 
-        @test firstindex(z_poly) == z_bottom
-        @test lastindex(z_poly)  == z_top
+        ref_coeffs = OffsetVector(
+            [ 
+                3-3im,
+                2-2im,
+                1-1im,
+                0im,
+                -1+1im,
+                -2+2im,
+                -3+3im
+            ], 
+            z_bottom:z_top
+        )
 
-        ref_coeffs = OffsetVector([ 3-3im,
-                                    2-2im,
-                                    1-1im,
-                                    0im,
-                                    -1+1im,
-                                    -2+2im,
-                                    -3+3im], z_bottom:z_top)
-
-        for i in eachindex(z_poly)
-            @test z_poly[i] ≈ ref_coeffs[i]
-        end
-
+        @test my_isapprox(z_poly, ref_coeffs, atol=1e-10)
+        
         ################
 
         top = 3
@@ -612,17 +561,13 @@ function test()
 
         z_poly = z_conj_diff(poly, 1.0)
 
-        @test firstindex(z_poly) == z_bottom
-        @test lastindex(z_poly)  == z_top
+        ref_coeffs = OffsetVector(
+            [ 3-3im, 2-2im, 1-1im], 
+            z_bottom:z_top
+        )
 
-        ref_coeffs = OffsetVector([ 3-3im,
-                                    2-2im,
-                                    1-1im], z_bottom:z_top)
-
-        for i in eachindex(z_poly)
-            @test z_poly[i] ≈ ref_coeffs[i]
-        end
-
+        @test my_isapprox(z_poly, ref_coeffs, atol=1e-10)
+        
         ################
 
         bottom = -3
@@ -642,17 +587,13 @@ function test()
 
         z_poly = z_conj_diff(poly, 1.0)
 
-        @test firstindex(z_poly) == z_bottom
-        @test lastindex(z_poly)  == z_top
+        ref_coeffs = OffsetVector(
+            [ -1+1im, -2+2im, -3+3im], 
+            z_bottom:z_top
+        )
 
-        ref_coeffs = OffsetVector([ -1+1im,
-                                    -2+2im,
-                                    -3+3im], z_bottom:z_top)
-
-        for i in eachindex(z_poly)
-            @test z_poly[i] ≈ ref_coeffs[i]
-        end
-
+        @test my_isapprox(z_poly, ref_coeffs, atol=1e-10)
+        
         ################
 
         bottom = 0
@@ -672,14 +613,10 @@ function test()
 
         z_poly = z_conj_diff(poly, 1.0)
 
-        @test firstindex(z_poly) == z_bottom
-        @test lastindex(z_poly)  == z_top
-
         ref_coeffs = OffsetVector([ 0im,], z_bottom:z_top)
 
-        for i in eachindex(z_poly)
-            @test z_poly[i] ≈ ref_coeffs[i]
-        end
+        @test my_isapprox(z_poly, ref_coeffs, atol=1e-10)
+        
     end
 
     @testset "Random polynomials" begin
@@ -715,9 +652,7 @@ function test()
                
         ], d_bottom:d_top)
 
-        for i in eachindex(d_poly)
-            @test d_poly[i] ≈ ref_coeffs[i]
-        end
+        @test my_isapprox(d_poly, ref_coeffs, atol=1e-10)
 
         ################
 
@@ -735,10 +670,8 @@ function test()
                 1.2092951473640940474 - 1.1847202291441174538im
         ], c_bottom:c_top)
 
-        for i in eachindex(c_poly)
-            @test c_poly[i] ≈ ref_coeffs[i]
-        end
-
+        @test my_isapprox(c_poly, ref_coeffs, atol=1e-10)
+        
         #####################
 
         z_bottom = -1
@@ -756,9 +689,8 @@ function test()
             -6.5183690899340289704 + 6.3859048295242217819im
         ], z_bottom:z_top)
 
-        for i in eachindex(z_poly)
-            @test z_poly[i] ≈ ref_coeffs[i]
-        end
+        @test my_isapprox(z_poly, ref_coeffs, atol=1e-10)
+        
     end
 end
 

@@ -2,8 +2,7 @@ module TestPlaneProblems
 
 using Test
 
-using ..Common: my_isapprox, coincede_indices
-
+using VanFoFy.Testing: my_isapprox, coincede_indices
 using VanFoFy.PlaneProblems: PlaneLayer, add!, PlaneFiber
 using VanFoFy.PlaneProblems: forces_series!, displacements_series!
 using VanFoFy.Input: LayerData, InclusionData
@@ -95,17 +94,23 @@ function test2()
         var_indices = 10:21
         fiber = PlaneFiber(layers_data, var_indices)
         
-        @test coincede_indices(fiber[1].ϕ, fiber[1].inner_z_bar_Φ)
-        @test coincede_indices(fiber[1].ϕ, fiber[1].outer_z_bar_Φ)
-        @test coincede_indices(fiber[1].ϕ, fiber[1].inner_bar_ψ)
-        @test coincede_indices(fiber[1].ϕ, fiber[1].outer_bar_ψ)
+        #########################################
+        # Проверяем совпадение индексов
+        flag = true
+        flag = flag && coincede_indices(fiber[1].ϕ, fiber[1].inner_z_bar_Φ)
+        flag = flag && coincede_indices(fiber[1].ϕ, fiber[1].outer_z_bar_Φ)
+        flag = flag && coincede_indices(fiber[1].ϕ, fiber[1].inner_bar_ψ)
+        flag = flag && coincede_indices(fiber[1].ϕ, fiber[1].outer_bar_ψ)
         for l in firstindex(fiber)+1 : lastindex(fiber)
-            @test coincede_indices(fiber[l-1].ϕ,             fiber[l].ϕ)
-            @test coincede_indices(fiber[l-1].inner_z_bar_Φ, fiber[l].inner_z_bar_Φ)
-            @test coincede_indices(fiber[l-1].inner_bar_ψ,   fiber[l].inner_bar_ψ)
-            @test coincede_indices(fiber[l-1].outer_z_bar_Φ, fiber[l].outer_z_bar_Φ)
-            @test coincede_indices(fiber[l-1].outer_bar_ψ,   fiber[l].outer_bar_ψ)
+            flag = flag && coincede_indices(fiber[l-1].ϕ,             fiber[l].ϕ)
+            flag = flag && coincede_indices(fiber[l-1].inner_z_bar_Φ, fiber[l].inner_z_bar_Φ)
+            flag = flag && coincede_indices(fiber[l-1].inner_bar_ψ,   fiber[l].inner_bar_ψ)
+            flag = flag && coincede_indices(fiber[l-1].outer_z_bar_Φ, fiber[l].outer_z_bar_Φ)
+            flag = flag && coincede_indices(fiber[l-1].outer_bar_ψ,   fiber[l].outer_bar_ψ)
         end      
+        @test flag
+
+        #########################################
 
         for l in firstindex(fiber)+1 : lastindex(fiber)
             layer1 = fiber[l-1]
@@ -178,24 +183,26 @@ function test3()
         add!(displ_form, ϕ,       κ/(2G))
         add!(displ_form, z_bar_Φ, -1.0/(2G))
         add!(displ_form, bar_ψ,   -1.0/(2G))
-
         output = similar(ϕ[end])
+
+        flag = true
         for v in var_indices
             displacements_series!(output, fiber, v)
-            @test my_isapprox(displ_form[v], output, atol=1e-10)
+            flag = flag && my_isapprox(displ_form[v], output, atol=1e-10)
         end
+        @test flag
 
         force_form = similar(ϕ)
         add!(force_form, ϕ,       1.0)
         add!(force_form, z_bar_Φ, 1.0)
         add!(force_form, bar_ψ,   1.0)
+        
+        flag = true
         for v in var_indices
             forces_series!(output, fiber, v)
-            if ! my_isapprox(force_form[v], output, atol=1e-10)
-                println(v)
-            end
-            @test my_isapprox(force_form[v], output, atol=1e-10)
+            flag = flag && my_isapprox(force_form[v], output, atol=1e-10)
         end
+        @test flag
     end 
 end
 

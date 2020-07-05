@@ -1,6 +1,7 @@
 module TestQSpecial
 
 using Test, OffsetArrays
+using VanFoFy.Testing: my_isapprox
 using VanFoFy.Types: raw_complex, Lattice, BoundedVector
 using VanFoFy.SpecialWeierstrass: Weierstrass
 using VanFoFy.SpecialQ: QSpecial
@@ -21,40 +22,53 @@ function test()
     ###########################################################################
 
     @testset "Q Special function derivatives values" begin    
+        ref_array = OffsetVector([
+            -0.51663997136492256779 + 0.59933186734118426564im,
+            0.03059293447909888428 + 1.19592812759260613831im,
+            0.61792409039690798789 + 0.53104522549332222603im,
+            0.21949109770876260028 - 0.23037200859738624081im,
+            -0.25667024508338398547 - 0.26175052836614570717im,
+            -0.34680442894981433621 + 0.03239450713556108613im,
+            -0.09690359568209910845 + 0.21090154612274475410im,
+            0.12370320077810871562 + 0.08401792981864268650im,
+            0.100108873864963227041 - 0.090530908012789471084im,
+            -0.027628709900863662741 - 0.107911340307848935272im,
+            -0.076637122750858210907 - 0.012691979234158738341im],
+            0:10
+        )     
+        Q_array = OffsetVector(
+            [
+                Q[rz, n] for n in 0:10
+            ],
+            0:10
+        )   
+        @test my_isapprox(Q_array, ref_array, atol=1e-14)
         
-        @test Q[rz, 0]  ≈ -0.51663997136492256779 + 0.59933186734118426564im
-        @test Q[rz, 1]  ≈ 0.03059293447909888428 + 1.19592812759260613831im
-        @test Q[rz, 2]  ≈ 0.61792409039690798789 + 0.53104522549332222603im
-        @test Q[rz, 3]  ≈ 0.21949109770876260028 - 0.23037200859738624081im
-        @test Q[rz, 4]  ≈ -0.25667024508338398547 - 0.26175052836614570717im
-        @test Q[rz, 5]  ≈ -0.34680442894981433621 + 0.03239450713556108613im
-        @test Q[rz, 6]  ≈ -0.09690359568209910845 + 0.21090154612274475410im
-        @test Q[rz, 7]  ≈ 0.12370320077810871562 + 0.08401792981864268650im
-        @test Q[rz, 8]  ≈ 0.100108873864963227041 - 0.090530908012789471084im
-        @test Q[rz, 9]  ≈ -0.027628709900863662741 - 0.107911340307848935272im
-        @test Q[rz, 10] ≈ -0.076637122750858210907 - 0.012691979234158738341im
+        ###################################
+        
+        ref_array = OffsetVector([
+            0.51663997136492256779 - 0.59933186734118426564im, 
+            0.03059293447909888428 + 1.19592812759260613831im, 
+            -0.61792409039690798789 - 0.53104522549332222603im, 
+            0.21949109770876260028 - 0.23037200859738624081im, 
+            0.25667024508338398547 + 0.26175052836614570717im, 
+            -0.34680442894981433621 + 0.03239450713556108613im, 
+            0.09690359568209910845 - 0.21090154612274475410im, 
+            0.12370320077810871562 + 0.08401792981864268650im, 
+            -0.100108873864963227041 + 0.090530908012789471084im, 
+            -0.027628709900863662741 - 0.107911340307848935272im, 
+            0.076637122750858210907 + 0.012691979234158738341im],
+            0:10
+        )
+        Q_array = OffsetVector(
+            [
+                Q[-rz, n] for n in 0:10
+            ],
+            0:10
+        )   
+        @test my_isapprox(Q_array, ref_array, atol=1e-14)
     end
-
-    ###################################
-
-    ref_array = OffsetVector([
-        0.51663997136492256779 - 0.59933186734118426564im, 
-        0.03059293447909888428 + 1.19592812759260613831im, 
-        -0.61792409039690798789 - 0.53104522549332222603im, 
-        0.21949109770876260028 - 0.23037200859738624081im, 
-        0.25667024508338398547 + 0.26175052836614570717im, 
-        -0.34680442894981433621 + 0.03239450713556108613im, 
-        0.09690359568209910845 - 0.21090154612274475410im, 
-        0.12370320077810871562 + 0.08401792981864268650im, 
-        -0.100108873864963227041 + 0.090530908012789471084im, 
-        -0.027628709900863662741 - 0.107911340307848935272im, 
-        0.076637122750858210907 + 0.012691979234158738341im],
-        0:10)
-
-    for n in 0 : 10
-        @test Q[-rz, n] ≈ ref_array[n] atol=1e-14
-    end
-
+            
     ###########################################################################
 
     @testset "Q special function Taylor series" begin
@@ -72,9 +86,13 @@ function test()
             0.0im],
         0:10)
 
-        for n in 0 : 10
-            @test Q.derivs_series[0,n] ≈ ref_array[n] atol=1e-14
-        end
+        Q_array = OffsetVector(
+            [
+                Q.derivs_series[0,n] for n in 0:10
+            ],
+            0:10
+        )
+        @test my_isapprox(Q_array, ref_array, atol=1e-14)
 
         ###############################
 
@@ -92,9 +110,14 @@ function test()
             -0.02683361029041383614 - 0.18246080727664615306im],
         0:10)
 
-        for n in 0 : 10
-            @test Q.derivs_series[3,n] ≈ ref_array[n] atol=1e-14
-        end
+        Q_array = OffsetVector(
+            [
+                Q.derivs_series[3,n] for n in 0:10
+            ],
+            0:10
+        )
+        @test my_isapprox(Q_array, ref_array, atol=1e-14)
+
     end
 
     ###########################################################################
@@ -106,7 +129,7 @@ function test()
 
         term = QSpecialTerm(derivative, 0//1im, 1.0+0.0im, r)
 
-        coeffs = BoundedVector{ComplexF64}(-10:10)
+        coeffs = BoundedVector{ComplexF64}(0:10)
         fill!(coeffs, 0.0im)
 
         add_term_series!(coeffs, term, point=rz, norm_r=R, praecursor=el_praecursor)
@@ -125,9 +148,7 @@ function test()
             0.000023949518606323101497 - 0.000010405235374447323730im],
         0:10)
 
-        for n in 0 : 10
-            @test coeffs[n] ≈ ref_array[n] atol=1e-14
-        end
+        @test my_isapprox(coeffs, ref_array, atol=1e-14)
     end
 
     @testset "QSpecial add_term_series at pole" begin
@@ -137,7 +158,7 @@ function test()
 
         term = QSpecialTerm(derivative, 0//1im, 1.0+0.0im, r)
 
-        coeffs = BoundedVector{ComplexF64}(-10:10)
+        coeffs = BoundedVector{ComplexF64}(0:10)
         fill!(coeffs, 0.0im)
 
         add_term_series!(coeffs, term, point=0//1im, norm_r=R, praecursor=el_praecursor)
@@ -156,9 +177,7 @@ function test()
             -3.365813594520620680e-9 - 2.2886561254798310949e-8im],
         0:10)
 
-        for n in 0 : 10
-            @test coeffs[n] ≈ ref_array[n] atol=1e-14
-        end
+        @test my_isapprox(coeffs, ref_array, atol=1e-14)
     end
 end
 
