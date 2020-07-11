@@ -52,41 +52,52 @@ struct PlaneLayer
         end
         
         n_vars = size(var_indices, 1)
-        if n_vars % 2 == 1
+        if n_vars % 4 != 0
             error("Odd number of variables complex parts")
         end
     
-        max_power = n_vars - 1
-    
+        N = n_vars ÷ 4 - 2
+        
         ϕ = VarLinForm(
             OffsetVector(
                 [
-                    PolynomialTerm(-max_power:max_power+2, r_fiber) for v in var_indices
+                    PolynomialTerm(-N : N+2, r_fiber) for v in var_indices
                 ], 
                 var_indices
             )
         )
+        bottom_ϕ = first(var_indices)
+        ϕ_ind = bottom_ϕ : bottom_ϕ + 2(N+3) - 1
+        top_ϕ    = last(ϕ_ind)
         
         ψ = VarLinForm(
             OffsetVector(
                 [
-                    PolynomialTerm(-max_power-2:max_power, r_fiber) for v in var_indices
+                    PolynomialTerm(-(N+2) : N, r_fiber) for v in var_indices
                 ], 
-                var_indices)
-            )       
-    
-        bottom_var = first(var_indices)
-        for v in var_indices
-            p = (v - bottom_var) ÷ 2
-            ϕ_poly = ϕ[v]
-            ψ_poly = ψ[v]
-            if (v - bottom_var) % 2 == 0
-                ϕ_poly[p] = 1.0+0.0im
-                ψ_poly[p] = 1.0+0.0im
-            else
-                ϕ_poly[p] = 0.0+1.0im
-                ψ_poly[p] = 0.0+1.0im
-            end
+                var_indices
+            )
+        )       
+        bottom_ψ = top_ϕ + 1
+        ψ_ind = bottom_ψ : bottom_ψ + 2(N+1) - 1
+        top_ψ    = last(ψ_ind)
+
+        ϕ_re = bottom_ϕ : 2 : top_ϕ
+        for i in ϕ_re
+            ϕ[i][(i-bottom_ϕ) ÷ 2] = 1.0 + 0.0im
+        end
+        ϕ_im = bottom_ϕ+1 : 2 : top_ϕ
+        for i in ϕ_im
+            ϕ[i][(i-bottom_ϕ) ÷ 2] = 0.0 + 1.0im
+        end
+        
+        ψ_re = bottom_ψ : 2 : top_ψ
+        for i in ψ_re
+            ψ[i][(i-bottom_ψ) ÷ 2] = 1.0 + 0.0im
+        end
+        ψ_im = bottom_ψ+1 : 2 : top_ψ
+        for i in ψ_im
+            ψ[i][(i-bottom_ψ) ÷ 2] = 0.0 + 1.0im
         end
     
         outer_z_bar_Φ = z_conj_diff(ϕ, r_outer)
