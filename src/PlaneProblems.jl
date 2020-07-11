@@ -292,7 +292,10 @@ struct PlaneCohesive
         Φ = VarLinForm(Φ_terms)
         
         C_var = B_var
-        n_C_vars = n_B_vars
+        n_C_vars = 2
+        for incl in inclusions
+            n_C_vars += (incl.max_power+2) * 2
+        end
         
         C_inds = first_index + 2 : C_var + n_C_vars - 1
         ψ_terms = OffsetVector{EllipticalTerm}(undef, C_inds)
@@ -313,7 +316,8 @@ struct PlaneCohesive
                 B_var += 1
                 ψ_terms[B_var] = QSpecialTerm(n, ζ_k, -0.0-1.0im, r_k)
                 B_var += 1
-    
+            end
+            for n in -1 : N_k    
                 ψ_terms[C_var] = WeierstrassTerm(n, ζ_k, 1.0+0.0im, r_k)
                 C_var += 1
                 ψ_terms[C_var] = WeierstrassTerm(n, ζ_k, 0.0+1.0im, r_k)
