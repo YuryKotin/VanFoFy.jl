@@ -122,6 +122,15 @@ function add_term_series!(  output,
     
     ℘ = praecursor.℘
     Δ = point - term.pole
+
+    bottom = firstindex(output)
+    top    = lastindex(output)
+    if !conjugated
+        K = top - power_shift
+    else
+        K = -bottom + power_shift
+    end
+
     if Δ == 0
 
         r = term.norm_r
@@ -131,14 +140,21 @@ function add_term_series!(  output,
         addend = n % 2 == 0 ? 1.0+0.0im : -1.0+0.0im
         addend *= (r / R)^(n+2) * term.num_factor
         if !conjugated
-            output[-(n+2)+power_shift] += addend * factor
+            ind = -(n + 2) + power_shift
         else
-            output[n+2+power_shift] += conj(addend) * factor
+            ind = n + 2 + power_shift
+        end
+        if bottom <= ind <= top
+            if !conjugated
+                output[ind] += addend * factor
+            else
+                output[ind] += conj(addend) * factor
+            end
         end
         
         rn = r^(n+2)
         Rk = 1.0
-        K = lastindex(output)
+
         for k in 0 : K
             addend = term.num_factor * rn * Rk * ℘.derivs_series[n,k]
             if !conjugated
@@ -150,10 +166,11 @@ function add_term_series!(  output,
         end
 
     else        
+
         z = raw_complex(℘.lattice, Δ)
         rΔ = term.norm_r / abs(z)
         RΔ = norm_r / abs(z)
-        K = lastindex(output)
+
         n = term.deriv
         
         rΔ_n = (n == -1 ? rΔ : rΔ^(n+2) / (n+1))
@@ -196,8 +213,16 @@ function add_term_series!(output,
 
     r = term.norm_r
     R = norm_r
-    K = lastindex(output)
     n = term.deriv
+
+    bottom = firstindex(output)
+    top    = lastindex(output)
+    if !conjugated
+        K = top - power_shift
+    else
+        K = -bottom + power_shift
+    end
+
     if Δ == 0
         rn = r^(n+3)
         Rk = 1.0
@@ -248,7 +273,7 @@ function add_term_series!(output,
     z = raw_complex(praecursor.l, point)
     if conjugated
         output[0+power_shift] += conj(z * term.num_factor) * factor
-        output[1+power_shift] += (abs(z)^2 / norm_r) * conj(term.num_factor) * factor
+        output[-1+power_shift] += (abs(z)^2 / norm_r) * conj(term.num_factor) * factor
     else
         output[0+power_shift] += z * term.num_factor * factor
         output[1+power_shift] += norm_r * term.num_factor * factor

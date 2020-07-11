@@ -91,13 +91,15 @@ function Base.getindex(bv::BoundedVector{T}, key::Int) where T
     if bv.bottom <= key <= bv.top
         @inbounds return bv.vector[key]
     else
-        return zero(T)
+        error("Index out of bounds")
     end
 end
 
 function Base.setindex!(bv::BoundedVector{T}, val::T, key::Int) where T
     if bv.bottom <= key <= bv.top
         @inbounds bv.vector[key] = val
+    else
+        error("Index out of bounds")
     end
 end
 

@@ -58,15 +58,18 @@ function my_isapprox(
         return false
     end
 
+    flag = true
     for i in eachindex(x)
         if ! isapprox(x[i], y[i], atol=atol, rtol=rtol)
-            println(typeof(x), " , ", typeof(y))
-            println("Values don't match: x[$i]=", x[i], " y[$i]=", y[i])
-            return false
+            if flag # Печатает только первый раз
+                println(typeof(x), " , ", typeof(y))
+            end
+            println("Values don't match: x[$i]=", x[i], "; y[$i]=", y[i])
+            flag =  false
         end
     end
 
-    return true
+    return flag
 end
 
 function coincede_indices(x::VarLinForm{T}, y::VarLinForm{T}) where T
