@@ -2,14 +2,13 @@ module Input
 
 using ..Types: RationalComplex
 
-struct FibersData
+struct FiberData
     E        :: Vector{Float64}
     ν        :: Vector{Float64}
-    G        :: Vector{Float64}
     radii    :: Vector{Float64}
     r_inner  :: Float64
     center   :: RationalComplex
-    n_terms  :: Int64
+    max_power:: Int64
 end
 
 "
@@ -39,7 +38,7 @@ struct CellData
     l1       :: Float64
     l2       :: Float64
     γ        :: Float64
-    fibers   :: Vector{FibersData}
+    fibers   :: Vector{FiberData}
     cohesive :: CohesiveData
 end
 

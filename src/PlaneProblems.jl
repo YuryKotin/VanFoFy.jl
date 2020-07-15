@@ -6,409 +6,144 @@
 
 module PlaneProblems
 
-using ..Types: VarLinForm, BoundedVector, RationalComplex
+using ..Types: VarLinForm, BoundedVector, RationalComplex, set_bounds!
 using ..FunctionalTerms: PolynomialTerm, PolynomialSolution
 using ..FunctionalTerms: EllipticalSolution
 using ..FunctionalTerms: z_conj_diff, conjugate, reconjugate, add!
 using ..FunctionalTerms: EllipticPraecursor, EllipticalTerm
 using ..FunctionalTerms: WeierstrassTerm, QSpecialTerm, ZTerm, ConstTerm
 using ..FunctionalTerms: differentiate, add_term_series!
-using ..Input: LayerData, InclusionData
+using ..Input: LayerData, InclusionData, CellData
 
 using OffsetArrays
 
-"
-Слой волокна для плоской задачи
-"
-struct PlaneLayer
-    " модуль Юнга"
-    E       ::Float64
-    "коэффициент Пуассона"
-    ν       ::Float64
-    "внутренний радиус слоя"
-    r_inner ::Float64
-    "внешний радиус слоя"
-    r_outer ::Float64
-    "функции решения в виде линейных форм от нормированных полиномов"
-    ϕ             ::PolynomialSolution
-    inner_z_bar_Φ ::PolynomialSolution
-    inner_bar_ψ   ::PolynomialSolution
-    outer_z_bar_Φ ::PolynomialSolution
-    outer_bar_ψ   ::PolynomialSolution
-    """
-    Конструктор сплошного ядра
-    """
-    function PlaneLayer(data::LayerData, r_fiber::Float64, var_indices::UnitRange{Int}) 
-    
-        E = data.E
-        ν = data.ν
-        r_outer = data.r
-    
-        if r_outer <= 0 || r_fiber <= 0
-            error("Nonpositive radius")
-        end
-        if r_outer > r_fiber
-            error("Layer is bigger than fiber")
-        end
-        
-        n_vars = size(var_indices, 1)
-        if n_vars % 4 != 0
-            error("Odd number of variables complex parts")
-        end
-    
-        N = n_vars ÷ 4 - 2
-        
-        ϕ = VarLinForm(
-            OffsetVector(
-                [
-                    PolynomialTerm(-N : N+2, r_fiber) for v in var_indices
-                ], 
-                var_indices
+include("PlaneFiber.jl")
+include("PlaneCohesive.jl")
+
+struct PlaneProblem
+    cohesive ::PlaneCohesive
+    fibers   ::Vector{PlaneFiber}
+    matrix   ::Matrix{Float64}
+    vector   ::Vector{Float64}
+end
+
+function PlaneProblem(cell::CellData, praecursor::EllipticPraecursor)
+    fibers_data = cell.fibers
+    n_fibers = size(fibers_data, 1)
+    cohesive_data = cell.cohesive
+
+    inclusions = [
+        InclusionData(f.center, f.radii[end], f.max_power) 
+        for f in fibers_data
+    ]
+    cohesive = PlaneCohesive(
+        cohesive_data.E, 
+        cohesive_data.ν, 
+        inclusions, 
+        1, 
+        praecursor
+    )
+
+    fibers = Vector{PlaneFiber}(undef, size(fibers_data, 1))
+    index = lastindex(cohesive) + 1
+    for f in 1 : n_fibers
+        data = fibers_data[f]
+        max_power = data.max_power
+        layers = [
+            LayerData(
+                data.E[i],
+                data.ν[i],
+                data.radii[i]
             )
-        )
-        bottom_ϕ = first(var_indices)
-        ϕ_ind = bottom_ϕ : bottom_ϕ + 2(N+3) - 1
-        top_ϕ    = last(ϕ_ind)
-        
-        ψ = VarLinForm(
-            OffsetVector(
-                [
-                    PolynomialTerm(-(N+2) : N, r_fiber) for v in var_indices
-                ], 
-                var_indices
-            )
-        )       
-        bottom_ψ = top_ϕ + 1
-        ψ_ind = bottom_ψ : bottom_ψ + 2(N+1) - 1
-        top_ψ    = last(ψ_ind)
-
-        ϕ_re = bottom_ϕ : 2 : top_ϕ
-        for i in ϕ_re
-            ϕ[i][(i-bottom_ϕ) ÷ 2] = 1.0 + 0.0im
-        end
-        ϕ_im = bottom_ϕ+1 : 2 : top_ϕ
-        for i in ϕ_im
-            ϕ[i][(i-bottom_ϕ) ÷ 2] = 0.0 + 1.0im
-        end
-        
-        ψ_re = bottom_ψ : 2 : top_ψ
-        for i in ψ_re
-            ψ[i][(i-bottom_ψ) ÷ 2] = 1.0 + 0.0im
-        end
-        ψ_im = bottom_ψ+1 : 2 : top_ψ
-        for i in ψ_im
-            ψ[i][(i-bottom_ψ) ÷ 2] = 0.0 + 1.0im
-        end
-    
-        outer_z_bar_Φ = z_conj_diff(ϕ, r_outer)
-        outer_bar_ψ = conjugate(ψ, r_outer)
-    
-        inner_z_bar_Φ = similar(outer_z_bar_Φ)
-        inner_bar_ψ =   similar(outer_bar_ψ)
-    
-    
-        new(
-            E, ν, 0.0, r_outer, ϕ, 
-            inner_z_bar_Φ, inner_bar_ψ, outer_z_bar_Φ, outer_bar_ψ
-        )
-    
+            for i in eachindex(data.E)
+        ]
+        vars = index : index + 2*(2*max_power+4) - 1
+        fibers[f] = PlaneFiber(layers, vars)
+        index = last(vars) + 1
     end
-    """
-    Конструктор следующего слоя
-    """
-    function PlaneLayer(data::LayerData, prev_layer::PlaneLayer)
-        E = data.E
-        ν = data.ν
-        r_outer = data.r
+
+    slae_size = index - 1
+
+    matrix = zeros(Float64, slae_size, slae_size)
+    vector = zeros(Float64, slae_size)
     
-        r_inner = prev_layer.r_outer
-        if r_inner >= r_outer
-            error("Layer has nonpositive width")
+    maximum_power = 0
+    for f in fibers_data
+        if f.max_power > maximum_power
+            maximum_power = f.max_power
         end
-    
-        E1 = prev_layer.E
-        ν1 = prev_layer.ν
-        G1 = E1/(2*(1+ν1))
-        κ1 = 3 - 4*ν1
-        
-        E2 = E
-        ν2 = ν
-        κ2 = 3 - 4*ν2
-        G2 = E2/(2*(1+ν2))
-    
-        ϕ1       = prev_layer.ϕ
-        z_bar_Φ1 = prev_layer.outer_z_bar_Φ
-        bar_ψ1   = prev_layer.outer_bar_ψ
-    
-        ϕ2 = similar(prev_layer.ϕ)
-    
-        bar_ψ2 = similar(prev_layer.outer_bar_ψ)
-        
-        add!(ϕ2, ϕ1,       (1+κ1*G2/G1)/(1+κ2))
-        add!(ϕ2, z_bar_Φ1, (1-G2/G1)   /(1+κ2))
-        add!(ϕ2, bar_ψ1,   (1-G2/G1)   /(1+κ2))
-        
-        z_bar_Φ2 = z_conj_diff(ϕ2, r_inner)
-    
-        add!(bar_ψ2, ϕ1,       +1.0)
-        add!(bar_ψ2, z_bar_Φ1, +1.0)
-        add!(bar_ψ2, bar_ψ1,   +1.0)
-        add!(bar_ψ2, ϕ2,       -1.0)
-        add!(bar_ψ2, z_bar_Φ2, -1.0)
-    
-        outer_z_bar_Φ2 = z_conj_diff(ϕ2, r_outer)
-        outer_bar_ψ2 = reconjugate(bar_ψ2, r_inner, r_outer)
-    
-        new(
-            E2, ν2, prev_layer.r_outer, r_outer, ϕ2, 
-            z_bar_Φ2, bar_ψ2, outer_z_bar_Φ2, outer_bar_ψ2
-        )
     end
-end
 
+    buffer = BoundedVector{ComplexF64}(-maximum_power : maximum_power + 2)
 
-"
-Волокно в плоской задаче
-"
-struct PlaneFiber
-    "Слои волокна"
-    layers  :: Vector{PlaneLayer}
-    "Конструктор"
-    function PlaneFiber(data::Vector{LayerData}, var_indices::UnitRange{Int})
-        if data[1].r <= 0
-            error("Layer has nonpositive outer radius")
-        end
-        for n in 2 : lastindex(data)
-            if data[n].r <= data[n-1].r
-                error("Layer has nonpositive width")
+    poles = [fibers_data[k].center for k in 1 : n_fibers]
+    radii = [fibers_data[k].radii[end] for k in 1 : n_fibers]
+    
+    func = [forces_series!, displacements_series!]
+    
+    for v in eachindex(cohesive)
+        row = 1
+
+        for k in 1 : n_fibers
+            n_terms = fibers_data[k].max_power
+            set_bounds!(buffer, -n_terms, n_terms+2)
+
+            for i in 1 : 2
+                fill!(buffer, 0.0im)
+
+                func[i](
+                    buffer, 
+                    cohesive, 
+                    poles[k], 
+                    radii[k], 
+                    v
+                )
+                
+                for n in -n_terms : n_terms+2
+                    coeff = buffer[n]
+                    matrix[row, v] = real(coeff)
+                    row += 1    
+                    matrix[row, v] = imag(coeff)
+                    row += 1
+                end
             end
         end
-        
-        r_fiber = data[end].r
-        
-        layers = Vector{PlaneLayer}(undef, size(data, 1))
-        
-        layers[1] = PlaneLayer(data[1], r_fiber, var_indices)
-        for n in 2 : lastindex(layers)
-            layers[n] = PlaneLayer(data[n], layers[n-1])
-        end
-        
-        new(layers)
     end
-end
 
-Base.getindex(fiber::PlaneFiber, ind::Int) = fiber.layers[ind]
-Base.firstindex(fiber::PlaneFiber) = firstindex(fiber.layers)
-Base.lastindex(fiber::PlaneFiber) = lastindex(fiber.layers)
-
-function displacements_series!(output, fiber::PlaneFiber, var::Int)
-    layer = fiber[end]
-    
-    E = layer.E
-    ν = layer.ν
-    G = E/(2*(1+ν))
-    κ = 3 - 4ν
-
-    ϕ = layer.ϕ[var]
-    z_bar_Φ = layer.outer_z_bar_Φ[var]
-    bar_ψ = layer.outer_bar_ψ[var]
-
-    for p in eachindex(ϕ)
-        output[p] = (κ*ϕ[p] - z_bar_Φ[p] - bar_ψ[p]) / (2G)
-    end
-end
-
-function forces_series!(output, fiber::PlaneFiber, var::Int)
-    layer = fiber[end]
-
-    E = layer.E
-    ν = layer.ν
-    G = E/(2*(1+ν))
-    κ = 3 - 4ν
-
-    ϕ = layer.ϕ[var]
-    z_bar_Φ = layer.outer_z_bar_Φ[var]
-    bar_ψ = layer.outer_bar_ψ[var]
-
-    for p in eachindex(ϕ)
-        output[p] = ϕ[p] + z_bar_Φ[p] + bar_ψ[p]
-    end
-end
-
-struct PlaneCohesive
-    " модуль Юнга"
-    E ::Float64
-    "коэффициент Пуассона"
-    ν ::Float64
-    "прекурсор эллиптических функций"
-    praesursor ::EllipticPraecursor
-    "функции решения в виде линейных форм эллиптических функций"
-    ϕ ::EllipticalSolution
-    Φ ::EllipticalSolution
-    ψ ::EllipticalSolution
-    "Конструктор"
-    function PlaneCohesive(
-        E ::Float64,
-        ν ::Float64,
-        inclusions ::Vector{InclusionData},
-        first_index ::Int,
-        praecursor ::EllipticPraecursor
-    )
-    
-        n_B_vars = 2
-        for incl in inclusions
-            n_B_vars += incl.max_power * 2
-        end
-    
-        B_inds = first_index : first_index + n_B_vars - 1
-        ϕ_terms = OffsetVector{EllipticalTerm}(undef, B_inds)
+    row = 1
+    for k in 1 : n_fibers
+        n_terms = fibers_data[k].max_power
+        set_bounds!(buffer, -n_terms, n_terms+2)
         
-        B_var = first_index
-        ϕ_terms[B_var] = ZTerm(1.0+0.0im)
-        B_var += 1
-        ϕ_terms[B_var] = ZTerm(0.0+1.0im)
-        B_var += 1
-    
-        K = size(inclusions, 1)
-        for k in 1 : K
-            N_k = inclusions[k].max_power
-            ζ_k = inclusions[k].center
-            r_k = inclusions[k].radius
-    
-            for n in -1 : N_k-2
-                ϕ_terms[B_var] = WeierstrassTerm(n, ζ_k, 1.0+0.0im, r_k)
-                B_var += 1
-                ϕ_terms[B_var] = WeierstrassTerm(n, ζ_k, 0.0+1.0im, r_k)
-                B_var += 1
+        fiber = fibers[k]
+        
+        row_k = row
+        
+        for v in eachindex(fiber)
+            for i in 1:2
+                row_k = row
+
+                fill!(buffer, 0.0im)
+
+                func[i](
+                    buffer,
+                    fiber,
+                    v
+                )
+
+                for n in -n_terms : n_terms+2
+                    coeff = buffer[n]
+                    matrix[row_k, v] = real(coeff)
+                    row_k += 1    
+                    matrix[row_k, v] = imag(coeff)
+                    row_k += 1
+                end
             end
         end
-    
-        ϕ = EllipticalSolution(ϕ_terms)
-    
-        Φ_terms = OffsetVector(
-            [ differentiate(ϕ_terms[b]) for b in B_inds ],
-            B_inds
-        )
-        Φ = VarLinForm(Φ_terms)
-        
-        C_var = B_var
-        n_C_vars = 2
-        for incl in inclusions
-            n_C_vars += (incl.max_power+2) * 2
-        end
-        
-        C_inds = first_index + 2 : C_var + n_C_vars - 1
-        ψ_terms = OffsetVector{EllipticalTerm}(undef, C_inds)
-    
-        ψ_terms[C_var] = ZTerm(1.0+0.0im)
-        C_var += 1
-        ψ_terms[C_var] = ZTerm(0.0+1.0im)
-        C_var += 1
 
-        B_var = first_index + 2
-        for k in 1 : K
-            N_k = inclusions[k].max_power
-            ζ_k = inclusions[k].center
-            r_k = inclusions[k].radius
-    
-            for n in -1 : N_k-2
-                ψ_terms[B_var] = QSpecialTerm(n, ζ_k, -1.0-0.0im, r_k)
-                B_var += 1
-                ψ_terms[B_var] = QSpecialTerm(n, ζ_k, -0.0-1.0im, r_k)
-                B_var += 1
-            end
-            for n in -1 : N_k    
-                ψ_terms[C_var] = WeierstrassTerm(n, ζ_k, 1.0+0.0im, r_k)
-                C_var += 1
-                ψ_terms[C_var] = WeierstrassTerm(n, ζ_k, 0.0+1.0im, r_k)
-                C_var += 1
-            end
-        end
-    
-        ψ = EllipticalSolution(ψ_terms)
-    
-        new(E, ν, praecursor, ϕ, Φ, ψ)
+        row = row_k
     end
+
+    PlaneProblem(cohesive, fibers, matrix, vector)
 end
-
-function forces_series!(
-    output, 
-    cohesive::PlaneCohesive,
-    pole::RationalComplex,
-    norm_r::Float64,
-    var::Int
-)
-    R = norm_r
-
-    ϕ = cohesive.ϕ[var]
-    Φ = cohesive.Φ[var]
-    ψ = cohesive.ψ[var]
-
-    fill!(output, 0.0im)
-
-    add!(f, factor; power_shift=1, conjugated=true) = 
-    add_term_series!(
-        output, 
-        f, 
-        point=pole, 
-        factor=complex(factor),
-        norm_r=R,
-        power_shift=power_shift,
-        conjugated=conjugated,
-        praecursor=cohesive.praesursor
-    )
-    
-    # ϕ 
-    add!(ϕ, 1.0)
-
-    # z bar Φ
-    add!(Φ, R, power_shift=1, conjugated=true)
-
-    # bar ψ
-    add!(ψ, 1.0, conjugated=true)
-end
-
-function displacement_series!(
-    output, 
-    cohesive::PlaneCohesive,
-    pole::RationalComplex,
-    norm_r::Float64,
-    var::Int
-)
-    E = cohesive.E
-    ν = cohesive.ν
-    G = E/(2*(1+ν))
-    κ = 3 - 4ν
-
-    R = norm_r
-
-    ϕ = cohesive.ϕ[var]
-    Φ = cohesive.Φ[var]
-    ψ = cohesive.ψ[var]
-
-    fill!(output, 0.0im)
-    
-    add!(f, factor; power_shift=1, conjugated=true) = 
-    add_term_series!(
-        output, 
-        f, 
-        point=pole, 
-        factor=complex(factor),
-        norm_r=R,
-        power_shift=power_shift,
-        conjugated=conjugated,
-        praecursor=cohesive.praesursor
-    )
-
-    # ϕ 
-    add!(ϕ, κ/(2G))
-
-    # z bar Φ
-    add!(Φ, -R/(2G), power_shift=1, conjugated=true)
-
-    # bar ψ
-    add!(ψ, -1/(2G), conjugated=true)
-    
-end
-
 end # module PlaneProblems

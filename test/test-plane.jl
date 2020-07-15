@@ -1,14 +1,15 @@
 module TestPlaneProblems
 
 using Test
+using DelimitedFiles
 
 using VanFoFy.Testing: my_isapprox, coincede_indices
 using VanFoFy.PlaneProblems: PlaneLayer, add!, PlaneFiber
 using VanFoFy.PlaneProblems: forces_series!, displacements_series!
-using VanFoFy.Input: LayerData, InclusionData
+using VanFoFy.Input: LayerData, InclusionData, CellData, CohesiveData, FiberData
 using VanFoFy.FunctionalTerms: EllipticPraecursor
 using VanFoFy.Types: Lattice
-using VanFoFy.PlaneProblems: PlaneCohesive
+using VanFoFy.PlaneProblems: PlaneCohesive, PlaneProblem
 
 function test1()
     @testset "Fiber layers coupling" begin
@@ -96,24 +97,25 @@ function test2()
         
         #########################################
         # Проверяем совпадение индексов
+        n_layers = size(fiber.layers, 1)
         flag = true
-        flag = flag && coincede_indices(fiber[1].ϕ, fiber[1].inner_z_bar_Φ)
-        flag = flag && coincede_indices(fiber[1].ϕ, fiber[1].outer_z_bar_Φ)
-        flag = flag && coincede_indices(fiber[1].ϕ, fiber[1].inner_bar_ψ)
-        flag = flag && coincede_indices(fiber[1].ϕ, fiber[1].outer_bar_ψ)
-        for l in firstindex(fiber)+1 : lastindex(fiber)
-            flag = flag && coincede_indices(fiber[l-1].ϕ,             fiber[l].ϕ)
-            flag = flag && coincede_indices(fiber[l-1].inner_z_bar_Φ, fiber[l].inner_z_bar_Φ)
-            flag = flag && coincede_indices(fiber[l-1].inner_bar_ψ,   fiber[l].inner_bar_ψ)
-            flag = flag && coincede_indices(fiber[l-1].outer_z_bar_Φ, fiber[l].outer_z_bar_Φ)
-            flag = flag && coincede_indices(fiber[l-1].outer_bar_ψ,   fiber[l].outer_bar_ψ)
+        flag = flag && coincede_indices(fiber.layers[1].ϕ, fiber.layers[1].inner_z_bar_Φ)
+        flag = flag && coincede_indices(fiber.layers[1].ϕ, fiber.layers[1].outer_z_bar_Φ)
+        flag = flag && coincede_indices(fiber.layers[1].ϕ, fiber.layers[1].inner_bar_ψ)
+        flag = flag && coincede_indices(fiber.layers[1].ϕ, fiber.layers[1].outer_bar_ψ)
+        for l in 2 : n_layers
+            flag = flag && coincede_indices(fiber.layers[l-1].ϕ,             fiber.layers[l].ϕ)
+            flag = flag && coincede_indices(fiber.layers[l-1].inner_z_bar_Φ, fiber.layers[l].inner_z_bar_Φ)
+            flag = flag && coincede_indices(fiber.layers[l-1].inner_bar_ψ,   fiber.layers[l].inner_bar_ψ)
+            flag = flag && coincede_indices(fiber.layers[l-1].outer_z_bar_Φ, fiber.layers[l].outer_z_bar_Φ)
+            flag = flag && coincede_indices(fiber.layers[l-1].outer_bar_ψ,   fiber.layers[l].outer_bar_ψ)
         end      
         @test flag
 
         #########################################
 
-        for l in firstindex(fiber)+1 : lastindex(fiber)
-            layer1 = fiber[l-1]
+        for l in 2 : n_layers
+            layer1 = fiber.layers[l-1]
             E1 = layer1.E
             ν1 = layer1.ν
             G1 = E1/(2*(1+ν1))
@@ -133,7 +135,7 @@ function test2()
             add!(force_form1, bar_ψ1,   1.0+0.0im)
 
 
-            layer2 = fiber[l]
+            layer2 = fiber.layers[l]
             E2 = layer2.E
             ν2 = layer2.ν
             G2 = E2/(2*(1+ν2))
@@ -170,7 +172,7 @@ function test3()
         var_indices = 10:21
         fiber = PlaneFiber(layers_data, var_indices)
 
-        layer = fiber[end]
+        layer = fiber.layers[end]
         E = layer.E
         ν = layer.ν
         G = E/(2*(1+ν))
@@ -223,11 +225,62 @@ function test4()
 
 end
 
+function test5()
+    ω1 = 1.0 + 0.0im
+    ω3 = exp(1.0im)
+    lattice = Lattice(ω1, ω3)
+    praecursor = EllipticPraecursor(lattice, 6)
+
+    cohesive_data = CohesiveData(1.0, 0.33)
+
+    fibers_data = [
+        FiberData(
+            [13.5, 12.2, 11.8, 10.0],
+            [0.16, 0.24, 0.26, 0.2],
+            [0.13, 0.28, 0.34, 0.5],
+            0.0,
+            1//3+1//3im,
+            6
+        ),
+        FiberData(
+            [8.6, 11.0],
+            [0.37, 0.3],
+            [0.16, 0.2],
+            0.0,
+            1//3 + 5//7im,
+            5
+        ),
+        FiberData(
+            [12.3],
+            [0.4],
+            [0.3],
+            0.0,
+            5//7 + 2//3im,
+            4
+        )
+    ]
+
+    cell_data = CellData(
+        2.0,
+        2.0,
+        1.0,
+        fibers_data,
+        cohesive_data
+    )
+
+    plane_problem = PlaneProblem(cell_data, praecursor)
+
+    ref_matrix = readdlm("matrix.txt", ',', Float64)
+
+    @test my_isapprox(ref_matrix[:,1], plane_problem.matrix[1:end-4, 1], atol=1e-14)
+end
+
 function test()
     test1()
     test2()
     test3()
     test4()
+    test5()
 end
 
 end # module TestPlaneProblems
