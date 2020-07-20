@@ -14,6 +14,8 @@ using ..FunctionalTerms: EllipticPraecursor, EllipticalTerm
 using ..FunctionalTerms: WeierstrassTerm, QSpecialTerm, ZTerm, ConstTerm
 using ..FunctionalTerms: differentiate, add_term_series!
 using ..Input: LayerData, InclusionData, CellData
+using ..Types: raw_complex
+import ..FunctionalTerms: eachpower
 
 using OffsetArrays
 
@@ -79,7 +81,7 @@ function PlaneProblem(cell::CellData, praecursor::EllipticPraecursor)
     poles = [fibers_data[k].center for k in 1 : n_fibers]
     radii = [fibers_data[k].radii[end] for k in 1 : n_fibers]
     
-    func = [forces_series!, displacements_series!]
+    func = [displacements_coupling!, forces_coupling!]
     
     for v in eachindex(cohesive)
         row = 1
@@ -89,7 +91,7 @@ function PlaneProblem(cell::CellData, praecursor::EllipticPraecursor)
             set_bounds!(buffer, -n_terms, n_terms+2)
 
             for i in 1 : 2
-                fill!(buffer, 0.0im)
+                # fill!(buffer, 0.0im)
 
                 func[i](
                     buffer, 
@@ -111,19 +113,19 @@ function PlaneProblem(cell::CellData, praecursor::EllipticPraecursor)
     end
 
     row = 1
+    row_k = 1
     for k in 1 : n_fibers
         n_terms = fibers_data[k].max_power
         set_bounds!(buffer, -n_terms, n_terms+2)
         
         fiber = fibers[k]
         
-        row_k = row
-        
         for v in eachindex(fiber)
-            for i in 1:2
-                row_k = row
+            row_k = row
 
-                fill!(buffer, 0.0im)
+            for i in 1:2
+
+                # fill!(buffer, 0.0im)
 
                 func[i](
                     buffer,
@@ -132,7 +134,7 @@ function PlaneProblem(cell::CellData, praecursor::EllipticPraecursor)
                 )
 
                 for n in -n_terms : n_terms+2
-                    coeff = buffer[n]
+                    coeff = -buffer[n]
                     matrix[row_k, v] = real(coeff)
                     row_k += 1    
                     matrix[row_k, v] = imag(coeff)

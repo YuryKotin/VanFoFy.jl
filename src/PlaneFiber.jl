@@ -48,8 +48,7 @@ struct PlaneLayer
             )
         )
         bottom_ϕ = first(var_indices)
-        ϕ_ind = bottom_ϕ : bottom_ϕ + 2(N+3) - 1
-        top_ϕ    = last(ϕ_ind)
+        top_ϕ    = bottom_ϕ + 2(N+3) - 1
         
         ψ = VarLinForm(
             OffsetVector(
@@ -60,25 +59,16 @@ struct PlaneLayer
             )
         )       
         bottom_ψ = top_ϕ + 1
-        ψ_ind = bottom_ψ : bottom_ψ + 2(N+1) - 1
-        top_ψ    = last(ψ_ind)
+        top_ψ    = bottom_ψ + 2(N+1) - 1
 
-        ϕ_re = bottom_ϕ : 2 : top_ϕ
-        for i in ϕ_re
-            ϕ[i][(i-bottom_ϕ) ÷ 2] = 1.0 + 0.0im
-        end
-        ϕ_im = bottom_ϕ+1 : 2 : top_ϕ
-        for i in ϕ_im
-            ϕ[i][(i-bottom_ϕ) ÷ 2] = 0.0 + 1.0im
+        for i in 0 : N+2
+            ϕ[bottom_ϕ + 2i + 0][i] = 1.0 + 0.0im
+            ϕ[bottom_ϕ + 2i + 1][i] = 0.0 + 1.0im
         end
         
-        ψ_re = bottom_ψ : 2 : top_ψ
-        for i in ψ_re
-            ψ[i][(i-bottom_ψ) ÷ 2] = 1.0 + 0.0im
-        end
-        ψ_im = bottom_ψ+1 : 2 : top_ψ
-        for i in ψ_im
-            ψ[i][(i-bottom_ψ) ÷ 2] = 0.0 + 1.0im
+        for i in 0 : N
+            ψ[bottom_ψ + 2i + 0][i] = 1.0 + 0.0im
+            ψ[bottom_ψ + 2i + 1][i] = 0.0 + 1.0im
         end
     
         outer_z_bar_Φ = z_conj_diff(ϕ, r_outer)
@@ -122,14 +112,14 @@ struct PlaneLayer
         bar_ψ1   = prev_layer.outer_bar_ψ
     
         ϕ2 = similar(prev_layer.ϕ)
-    
-        bar_ψ2 = similar(prev_layer.outer_bar_ψ)
         
         add!(ϕ2, ϕ1,       (1+κ1*G2/G1)/(1+κ2))
         add!(ϕ2, z_bar_Φ1, (1-G2/G1)   /(1+κ2))
         add!(ϕ2, bar_ψ1,   (1-G2/G1)   /(1+κ2))
         
         z_bar_Φ2 = z_conj_diff(ϕ2, r_inner)
+        
+        bar_ψ2 = similar(prev_layer.outer_bar_ψ)
     
         add!(bar_ψ2, ϕ1,       +1.0)
         add!(bar_ψ2, z_bar_Φ1, +1.0)
@@ -141,7 +131,7 @@ struct PlaneLayer
         outer_bar_ψ2 = reconjugate(bar_ψ2, r_inner, r_outer)
     
         new(
-            E2, ν2, prev_layer.r_outer, r_outer, ϕ2, 
+            E2, ν2, r_inner, r_outer, ϕ2, 
             z_bar_Φ2, bar_ψ2, outer_z_bar_Φ2, outer_bar_ψ2
         )
     end
@@ -150,6 +140,7 @@ end
 Base.firstindex(layer::PlaneLayer) = firstindex(layer.ϕ)
 Base.lastindex(layer::PlaneLayer) = lastindex(layer.ϕ)
 Base.eachindex(layer::PlaneLayer) = firstindex(layer) : lastindex(layer)
+eachpower(layer::PlaneLayer) = eachpower(layer.ϕ)
 
 "
 Волокно в плоской задаче
@@ -182,8 +173,9 @@ struct PlaneFiber
 end
 
 Base.eachindex(fiber::PlaneFiber) = eachindex(fiber.layers[1])
+eachpower(fiber::PlaneFiber) = eachpower(fiber.layers[1])
 
-function displacements_series!(output, fiber::PlaneFiber, var::Int)
+function displacements_coupling!(output, fiber::PlaneFiber, var::Int)
     layer = fiber.layers[end]
     
     E = layer.E
@@ -200,7 +192,7 @@ function displacements_series!(output, fiber::PlaneFiber, var::Int)
     end
 end
 
-function forces_series!(output, fiber::PlaneFiber, var::Int)
+function forces_coupling!(output, fiber::PlaneFiber, var::Int)
     layer = fiber.layers[end]
 
     E = layer.E

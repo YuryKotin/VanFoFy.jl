@@ -120,11 +120,14 @@ struct VarLinForm{T}
 end
 
 Base.getindex(form::VarLinForm, ind::Int) = getindex(form.terms, ind)
+Base.setindex!(form::VarLinForm{T}, val::T, ind::Int) where T = setindex!(form.terms, val, ind)
 Base.similar(form::VarLinForm) = VarLinForm(similar(form.terms))
 Base.firstindex(form::VarLinForm) = firstindex(form.terms)
+Base.first(form::VarLinForm) = first(form.terms)
 Base.lastindex(form::VarLinForm) = lastindex(form.terms)
 Base.eachindex(form::VarLinForm) = firstindex(form.terms) : lastindex(form.terms)
 Base.axes(form::VarLinForm, d) = axes(form.terms, d)
+Base.ndims(form::VarLinForm) = 1 + ndims(first(form.terms))
 
 ###############################################################################
 
@@ -139,6 +142,6 @@ end
 const RationalComplex = Complex{Rational{Int}}
 
 "Преобразование рационального комплексного числа в обыкновенное"
-raw_complex(l::Lattice, rz::RationalComplex) = real(rz)*l.ω1 + imag(rz)*l.ω3
+raw_complex(l::Lattice, rz::RationalComplex) = 2*real(rz)*l.ω1 + 2*imag(rz)*l.ω3
 
 end # module TypeSynonims

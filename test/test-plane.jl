@@ -2,14 +2,16 @@ module TestPlaneProblems
 
 using Test
 using DelimitedFiles
+using OffsetArrays
 
 using VanFoFy.Testing: my_isapprox, coincede_indices
 using VanFoFy.PlaneProblems: PlaneLayer, add!, PlaneFiber
-using VanFoFy.PlaneProblems: forces_series!, displacements_series!
+using VanFoFy.PlaneProblems: forces_coupling!, displacements_coupling!
 using VanFoFy.Input: LayerData, InclusionData, CellData, CohesiveData, FiberData
 using VanFoFy.FunctionalTerms: EllipticPraecursor
-using VanFoFy.Types: Lattice
-using VanFoFy.PlaneProblems: PlaneCohesive, PlaneProblem
+using VanFoFy.Types: Lattice, BoundedVector
+using VanFoFy.PlaneProblems: PlaneCohesive, PlaneProblem, eachpower
+using VanFoFy.FunctionalTerms: ZTerm, ConstTerm, WeierstrassTerm, QSpecialTerm
 
 function test1()
     @testset "Fiber layers coupling" begin
@@ -189,7 +191,7 @@ function test3()
 
         flag = true
         for v in var_indices
-            displacements_series!(output, fiber, v)
+            displacements_coupling!(output, fiber, v)
             flag = flag && my_isapprox(displ_form[v], output, atol=1e-10)
         end
         @test flag
@@ -201,28 +203,181 @@ function test3()
         
         flag = true
         for v in var_indices
-            forces_series!(output, fiber, v)
+            forces_coupling!(output, fiber, v)
             flag = flag && my_isapprox(force_form[v], output, atol=1e-10)
         end
         @test flag
     end 
+
+@testset "Multicoated fiber" begin
+    ω1 = 1.0 + 0.0im
+    ω3 = exp(1.0im)
+    lattice = Lattice(ω1, ω3)
+    praecursor = EllipticPraecursor(lattice, 6)
+
+    cohesive_data = CohesiveData(1.0, 0.33)
+
+    fibers_data = [
+        FiberData(
+            [13.5, 12.2, 11.8, 10.0],
+            [0.16, 0.24, 0.26, 0.2],
+            [0.13, 0.28, 0.34, 0.5],
+            0.0,
+            complex(1//3,1//3),
+            6
+        ),
+        FiberData(
+            [8.6, 11.0],
+            [0.37, 0.3],
+            [0.16, 0.2],
+            0.0,
+            complex(1//3, 5//7),
+            5
+        ),
+        FiberData(
+            [12.3],
+            [0.4],
+            [0.3],
+            0.0,
+            complex(5//7, 2//3),
+            4
+        )
+    ]
+
+    cell_data = CellData(
+        2.0,
+        2.0,
+        1.0,
+        fibers_data,
+        cohesive_data
+    )
+
+    plane_problem = PlaneProblem(cell_data, praecursor)
+
+    fiber = plane_problem.fibers[1]
+
+    ref_vector = [
+        1.0, 
+        0.98524492234169658289, 
+        0.97918549041852409598, 
+        0.83967230348918997507]
+    ind = firstindex(fiber.layers[1])
+    comp_vector = [fiber.layers[k].ϕ[ind][0] for k in 1 : 4]
+
+    # @test my_isapprox(ref_vector, comp_vector)
+
+    ref_vector = [
+        1.0, 
+        1.0361001068980695283, 
+        1.0464517928694767601, 
+        0.93295839017634774049]
+    ind = firstindex(fiber.layers[1]) + 2
+    comp_vector = [fiber.layers[k].ϕ[ind][1] for k in 1 : 4]
+    # @test my_isapprox(ref_vector, comp_vector)
+
+    ref_vector = [
+        1.0000000000000000000, 
+        0.98524492234169658289, 
+        0.97918549041852409598, 
+        0.83967230348918997507]
+    ind = firstindex(fiber.layers[1]) + 4
+    comp_vector = [fiber.layers[k].ϕ[ind][2] for k in 1 : 4]
+    # @test my_isapprox(ref_vector, comp_vector)
+
+
+    phi_1_1_re = readdlm("test_data/phi_1_1_re.txt", ',', Float64)
+    phi_1_1_im = readdlm("test_data/phi_1_1_im.txt", ',', Float64)
+    ϕ_1_1 = OffsetArray(
+        phi_1_1_re .+ phi_1_1_im .* 1.0im,
+        eachpower(fiber),
+        eachindex(fiber)
+    )
+
+    @test my_isapprox(ϕ_1_1, fiber.layers[1].ϕ)
+end
 end
 
 function test4()
-    @testset "Cohesive" begin
-        lattice = Lattice(1.0+0.0im, exp(1.0im))
-        praecursor = EllipticPraecursor(lattice, 20)
-        inclusions = [
-            InclusionData(1//5+1//5im, 0.1, 10),
-            InclusionData(4//5+4//5im, 0.1, 10),
-            InclusionData(1//2+1//2im, 0.1, 10)
-        ]
-        E = 10.0
-        ν = 0.3
-        first_index = 43 
-        cohesive = PlaneCohesive(E, ν, inclusions, first_index, praecursor)
-    end
+@testset "Cohesive" begin
+    ω1 = 1.0 + 0.0im
+    ω3 = exp(1.0im)
+    lattice = Lattice(ω1, ω3)
+    praecursor = EllipticPraecursor(lattice, 6)
 
+    cohesive_data = CohesiveData(1.0, 0.33)
+
+    fibers_data = [
+        FiberData(
+            [13.5, 12.2, 11.8, 10.0],
+            [0.16, 0.24, 0.26, 0.2],
+            [0.13, 0.28, 0.34, 0.5],
+            0.0,
+            complex(1//3,1//3),
+            6
+        ),
+        FiberData(
+            [8.6, 11.0],
+            [0.37, 0.3],
+            [0.16, 0.2],
+            0.0,
+            complex(1//3, 5//7),
+            5
+        ),
+        FiberData(
+            [12.3],
+            [0.4],
+            [0.3],
+            0.0,
+            complex(5//7, 2//3),
+            4
+        )
+    ]
+
+    cell_data = CellData(
+        2.0,
+        2.0,
+        1.0,
+        fibers_data,
+        cohesive_data
+    )
+
+    plane_problem = PlaneProblem(cell_data, praecursor)
+
+    cohesive = plane_problem.cohesive
+
+    buffer = BoundedVector{ComplexF64}(-6 : 8)
+
+    displacements_coupling!(
+        buffer,
+        cohesive,
+        complex(1//3,1//3),
+        0.5,
+        3
+    )
+
+    ref_vector = OffsetVector(
+        [
+            0.000013137314474721333444 + 0.000060922089524345094324im, 
+            0.000026954393863782635663 + 0.000031208370868321103260im, 
+            -0.022717409856195618784 - 0.008509615513728190084im, 
+            0.020418537947132203020 - 0.002910591998994666637im, 
+            0.019326246046475602930 - 0.014437136718637749722im, 
+            -2.2301102991334245118 - 0.0093731673949354055im, 
+            0.0im, 
+            0.0im, 
+            -2.7314694224061679684 - 1.4922085463926697546im, 
+            -1.33240223248528244504 - 0.00524897374116382702im, 
+            0.0im, 
+            0.0034481454838687932395 + 0.0004915212187426809499im, 
+            0.0im, 
+            -4.1777283301521625855e-6 + 4.8370627725249553200e-6im, 
+            0.0im
+        ],
+        -6:8
+    )
+
+    @test my_isapprox(ref_vector, buffer, atol=1e-14)
+end
 end
 
 function test5()
@@ -239,7 +394,7 @@ function test5()
             [0.16, 0.24, 0.26, 0.2],
             [0.13, 0.28, 0.34, 0.5],
             0.0,
-            1//3+1//3im,
+            complex(1//3,1//3),
             6
         ),
         FiberData(
@@ -247,7 +402,7 @@ function test5()
             [0.37, 0.3],
             [0.16, 0.2],
             0.0,
-            1//3 + 5//7im,
+            complex(1//3, 5//7),
             5
         ),
         FiberData(
@@ -255,7 +410,7 @@ function test5()
             [0.4],
             [0.3],
             0.0,
-            5//7 + 2//3im,
+            complex(5//7, 2//3),
             4
         )
     ]
@@ -270,17 +425,39 @@ function test5()
 
     plane_problem = PlaneProblem(cell_data, praecursor)
 
-    ref_matrix = readdlm("matrix.txt", ',', Float64)
+    ref_matrix = readdlm("test_data/matrix.txt", ',', Float64)
 
-    @test my_isapprox(ref_matrix[:,1], plane_problem.matrix[1:end-4, 1], atol=1e-14)
+    # @test my_isapprox(ref_matrix[:,1], plane_problem.matrix[1:end-4, 1], atol=1e-14)
+    # @test my_isapprox(ref_matrix[:,2], plane_problem.matrix[1:end-4, 2], atol=1e-14)
+    # @test my_isapprox(ref_matrix[:,3], plane_problem.matrix[1:end-4, 3], atol=1e-14)
+
+    @test typeof(plane_problem.cohesive.ψ[75]) == ZTerm
+    @test typeof(plane_problem.cohesive.ϕ[75]) == ConstTerm
+    @test plane_problem.cohesive.ϕ[75].num_factor == 0
+    @test typeof(plane_problem.cohesive.Φ[75]) == ConstTerm
+    @test plane_problem.cohesive.Φ[75].num_factor == 0
+
+    flag = true
+    errors = 0
+    for i in axes(ref_matrix, 2)
+        flag = my_isapprox(ref_matrix[:,i], plane_problem.matrix[1:end-4, i], atol=1e-12)
+        if !flag
+            println("Column: ", i)
+            errors += 1
+        end
+        if errors == 6
+            break
+        end
+    end
+    @test flag
 end
 
 function test()
-    test1()
-    test2()
+    # test1()
+    # test2()
     test3()
-    test4()
-    test5()
+    # test4()
+    # test5()
 end
 
 end # module TestPlaneProblems

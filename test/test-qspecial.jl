@@ -16,7 +16,7 @@ function test()
     wei = el_praecursor.℘
     Q = el_praecursor.Q
 
-    rz = complex(3//10, 7//10)
+    rz = complex(3//20, 7//20)
     z = raw_complex(lattice, rz)
     
     ###########################################################################

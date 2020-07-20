@@ -38,9 +38,9 @@ struct PlaneCohesive
         ϕ_terms = OffsetVector{EllipticalTerm}(undef, all_inds)
         ψ_terms = OffsetVector{EllipticalTerm}(undef, all_inds)
         
-        for b in B_inds
-            ψ_terms[b] = ConstTerm(0.0im)
-        end
+        ψ_terms[first_B]   = ConstTerm(0.0im)
+        ψ_terms[first_B+1] = ConstTerm(0.0im)
+        
         for c in C_inds
             ϕ_terms[c] = ConstTerm(0.0im)
         end
@@ -74,7 +74,7 @@ struct PlaneCohesive
         Φ = VarLinForm(Φ_terms)
         
         
-        B_var = first_index + 2
+        B_var = first_B + 2
         C_var = first_C
         for k in 1 : K
             N_k = inclusions[k].max_power
@@ -110,7 +110,7 @@ Base.firstindex(coh::PlaneCohesive) = firstindex(coh.ϕ)
 Base.lastindex(coh::PlaneCohesive) = lastindex(coh.ψ)
 Base.eachindex(coh::PlaneCohesive) = firstindex(coh) : lastindex(coh)
 
-function forces_series!(
+function forces_coupling!(
     output, 
     cohesive::PlaneCohesive,
     pole::RationalComplex,
@@ -119,13 +119,16 @@ function forces_series!(
 )
     R = norm_r
 
+    lattice = cohesive.praesursor.l
+    c = raw_complex(lattice, pole)
+
     ϕ = cohesive.ϕ[var]
     Φ = cohesive.Φ[var]
     ψ = cohesive.ψ[var]
 
     fill!(output, 0.0im)
 
-    add!(f, factor; power_shift=1, conjugated=true) = 
+    add!(f, factor; power_shift=0, conjugated=false) = 
     add_term_series!(
         output, 
         f, 
@@ -141,13 +144,14 @@ function forces_series!(
     add!(ϕ, 1.0)
 
     # z bar Φ
+    add!(Φ, c, conjugated=true)
     add!(Φ, R, power_shift=1, conjugated=true)
 
     # bar ψ
     add!(ψ, 1.0, conjugated=true)
 end
 
-function displacements_series!(
+function displacements_coupling!(
     output, 
     cohesive::PlaneCohesive,
     pole::RationalComplex,
@@ -161,13 +165,16 @@ function displacements_series!(
 
     R = norm_r
 
+    lattice = cohesive.praesursor.l
+    c = raw_complex(lattice, pole)
+
     ϕ = cohesive.ϕ[var]
     Φ = cohesive.Φ[var]
     ψ = cohesive.ψ[var]
 
     fill!(output, 0.0im)
     
-    add!(f, factor; power_shift=1, conjugated=true) = 
+    add!(f, factor; power_shift=0, conjugated=false) = 
     add_term_series!(
         output, 
         f, 
@@ -183,6 +190,7 @@ function displacements_series!(
     add!(ϕ, κ/(2G))
 
     # z bar Φ
+    add!(Φ, -c/(2G), conjugated=true)
     add!(Φ, -R/(2G), power_shift=1, conjugated=true)
 
     # bar ψ

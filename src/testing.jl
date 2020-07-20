@@ -41,35 +41,70 @@ function my_isapprox(
     atol::Real=0, 
     rtol::Real=atol>0 ? 0 : √eps(), 
 )
-    
-    x_bottom = firstindex(x)
-    y_bottom = firstindex(y)
-    if x_bottom != y_bottom
-        println(typeof(x), " , ", typeof(y))
-        println("First powers don't match: $x_bottom, $y_bottom")
-        return false
+    x_dims = ndims(x)
+    y_dims = ndims(y)
+    if x_dims != y_dims
+        error("Not matching dimensions")
     end
-
-    x_top = lastindex(x)
-    y_top = lastindex(y)
-    if x_top != y_top
-        println(typeof(x), " , ", typeof(y))
-        println("Last powers don't match: $x_top, $y_top")
-        return false
-    end
-
-    flag = true
-    for i in eachindex(x)
-        if ! isapprox(x[i], y[i], atol=atol, rtol=rtol)
-            if flag # Печатает только первый раз
-                println(typeof(x), " , ", typeof(y))
-            end
-            println("Values don't match: x[$i]=", x[i], "; y[$i]=", y[i])
-            flag =  false
+    if x_dims == 1
+        x_bottom = firstindex(x)
+        y_bottom = firstindex(y)
+        if x_bottom != y_bottom
+            println(typeof(x), " , ", typeof(y))
+            println("First powers don't match: $x_bottom, $y_bottom")
+            return false
         end
+
+        x_top = lastindex(x)
+        y_top = lastindex(y)
+        if x_top != y_top
+            println(typeof(x), " , ", typeof(y))
+            println("Last powers don't match: $x_top, $y_top")
+            return false
+        end
+
+        flag = true
+        for i in eachindex(x)
+            if ! isapprox(x[i], y[i], atol=atol, rtol=rtol)
+                if flag # Печатает только первый раз
+                    println(typeof(x), " , ", typeof(y))
+                end
+                println("Values don't match: x[$i]=", x[i], "; y[$i]=", y[i])
+                flag =  false
+            end
+        end
+
+        return flag
     end
 
-    return flag
+    if x_dims == 2
+        flag = true
+        
+        x_axes = axes(x)
+        y_axes = axes(y)
+        for i in 1 : x_dims
+            flag = flag && (first(x_axes[i]) == first(y_axes[i]))
+            flag = flag && (last(x_axes[i]) == last(y_axes[i]))
+        end    
+        if !flag
+            println("Axes don't match:", x_axes, " , ", y_axes)
+            return flag
+        end
+
+        flag = true
+        for i in eachindex(x)
+            if ! isapprox(x[i], y[i], atol=atol, rtol=rtol)
+                if flag # Печатает только первый раз
+                    println(typeof(x), " , ", typeof(y))
+                end
+                println("Values don't match: x[$i]=", x[i], "; y[$i]=", y[i])
+                flag =  false
+            end
+        end
+
+        return flag
+    end
+
 end
 
 function coincede_indices(x::VarLinForm{T}, y::VarLinForm{T}) where T

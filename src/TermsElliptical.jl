@@ -273,7 +273,7 @@ function add_term_series!(output,
     z = raw_complex(praecursor.l, point)
     if conjugated
         output[0+power_shift] += conj(z * term.num_factor) * factor
-        output[-1+power_shift] += (abs(z)^2 / norm_r) * conj(term.num_factor) * factor
+        output[-1+power_shift] += norm_r * conj(term.num_factor) * factor
     else
         output[0+power_shift] += z * term.num_factor * factor
         output[1+power_shift] += norm_r * term.num_factor * factor

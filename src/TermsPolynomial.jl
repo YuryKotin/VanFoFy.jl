@@ -21,6 +21,8 @@ Base.setindex!(term::PolynomialTerm, val::ComplexF64, i::Int) = setindex!(term.c
 Base.firstindex(term::PolynomialTerm) = firstindex(term.coeffs)
 Base.lastindex(term::PolynomialTerm) = lastindex(term.coeffs)
 Base.eachindex(term::PolynomialTerm) = firstindex(term.coeffs) : lastindex(term.coeffs)
+Base.ndims(term::PolynomialTerm) = 1
+Base.axes(term::PolynomialTerm) = axes(term.coeffs)
 function Base.similar(term::PolynomialTerm) 
     PolynomialTerm(eachindex(term), term.norm_r)
 end
@@ -234,10 +236,10 @@ function add!(dest::PolynomialTerm, source::PolynomialTerm, factor)
 end
 
 """
-    add_term_series!(output::BoundedVector{ComplexF64}, term::PolynomialTerm; factor::ComplexF64)
+    add_term_series!(output, term::PolynomialTerm; factor::ComplexF64)
 Прибавление полинома к контейнеру output
 """
-function add_term_series!(  output::BoundedVector{ComplexF64}, 
+function add_term_series!(  output, 
                             term  ::PolynomialTerm; 
                             factor::ComplexF64)
     for i in eachindex(term)
@@ -338,3 +340,5 @@ function Base.similar(source::VarLinForm{PolynomialTerm})
     )
     return form
 end
+
+eachpower(sol::PolynomialSolution) = eachindex(first(sol))
