@@ -82,9 +82,10 @@ struct PlaneCohesive
             r_k = inclusions[k].radius
             
             for n in -1 : N_k-2
-                ψ_terms[B_var] = QSpecialTerm(n+1, ζ_k, -1.0-0.0im, r_k)
+                factor = -(n+2)/(r_k^2)
+                ψ_terms[B_var] = QSpecialTerm(n+1, ζ_k, complex(factor,0.0), r_k)
                 B_var += 1
-                ψ_terms[B_var] = QSpecialTerm(n+1, ζ_k, -0.0-1.0im, r_k)
+                ψ_terms[B_var] = QSpecialTerm(n+1, ζ_k, complex(0.0,factor), r_k)
                 B_var += 1
             end
             for n in -1 : N_k    

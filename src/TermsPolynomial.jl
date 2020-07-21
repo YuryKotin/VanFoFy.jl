@@ -116,7 +116,7 @@ function reconjugate(term::PolynomialTerm, old_conj_r::Float64, new_conj_r::Floa
     R1 = old_conj_r
     R2 = new_conj_r
 
-    factor = (R2 / R1)^2
+    factor = (R1 / R2)^2
     f_pow = factor
     
     bottom = firstindex(term)
@@ -125,12 +125,15 @@ function reconjugate(term::PolynomialTerm, old_conj_r::Float64, new_conj_r::Floa
         rc_term[i] = term[i] * f_pow
         f_pow *= factor
     end
+
+    rc_term[0] = term[0]
+
     f_pow = 1/factor
     for i in -1 : -1 : bottom
         rc_term[i] = term[i] * f_pow
         f_pow /= factor
     end
-
+    
     return rc_term
 end
 

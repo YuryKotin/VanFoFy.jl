@@ -12,6 +12,7 @@ using VanFoFy.FunctionalTerms: EllipticPraecursor
 using VanFoFy.Types: Lattice, BoundedVector
 using VanFoFy.PlaneProblems: PlaneCohesive, PlaneProblem, eachpower
 using VanFoFy.FunctionalTerms: ZTerm, ConstTerm, WeierstrassTerm, QSpecialTerm
+using VanFoFy.FunctionalTerms: conjugate
 
 function test1()
     @testset "Fiber layers coupling" begin
@@ -284,16 +285,45 @@ function test3()
     comp_vector = [fiber.layers[k].ϕ[ind][2] for k in 1 : 4]
     # @test my_isapprox(ref_vector, comp_vector)
 
+    function read_test_data(name::String)
+        f_re = readdlm("test_data/" * name * "_re.txt", ',', Float64)
+        f_im = readdlm("test_data/" * name * "_im.txt", ',', Float64)
+        OffsetArray(
+            f_re .+ f_im .* 1.0im,
+            eachpower(fiber),
+            eachindex(fiber)
+        )
+    end
 
-    phi_1_1_re = readdlm("test_data/phi_1_1_re.txt", ',', Float64)
-    phi_1_1_im = readdlm("test_data/phi_1_1_im.txt", ',', Float64)
-    ϕ_1_1 = OffsetArray(
-        phi_1_1_re .+ phi_1_1_im .* 1.0im,
-        eachpower(fiber),
-        eachindex(fiber)
-    )
+    @test my_isapprox(fiber.layers[1].ϕ, read_test_data("phi_1_1"))
+    @test my_isapprox(fiber.layers[1].outer_z_bar_Φ, read_test_data("z_bar_Phi_1_1"))
+    @test my_isapprox(fiber.layers[1].outer_bar_ψ, read_test_data("bar_psi_1_1"))
 
-    @test my_isapprox(ϕ_1_1, fiber.layers[1].ϕ)
+    @test my_isapprox(fiber.layers[2].ϕ, read_test_data("phi_1_2"))
+    @test my_isapprox(fiber.layers[2].outer_z_bar_Φ, read_test_data("z_bar_Phi_1_2"))
+    @test my_isapprox(fiber.layers[2].outer_bar_ψ, read_test_data("bar_psi_1_2"))
+
+    r1 = fiber.layers[1].r_outer
+    r2 = fiber.layers[2].r_outer
+
+    ϕ1       = fiber.layers[1].ϕ
+    z_bar_Φ1 = fiber.layers[1].outer_z_bar_Φ
+    bar_ψ1   = fiber.layers[1].outer_bar_ψ
+    ϕ2       = fiber.layers[2].ϕ
+    z_bar_Φ2 = fiber.layers[2].inner_z_bar_Φ
+
+    bar_ψ2 = similar(fiber.layers[1].outer_bar_ψ)
+    add!(bar_ψ2, ϕ1,       +1.0)
+    add!(bar_ψ2, z_bar_Φ1, +1.0)
+    add!(bar_ψ2, bar_ψ1,   +1.0)
+    add!(bar_ψ2, ϕ2,       -1.0)
+    add!(bar_ψ2, z_bar_Φ2, -1.0)
+    bar_ψ2 = conjugate(bar_ψ2, r1)
+    bar_ψ2 = conjugate(bar_ψ2, r2)
+
+    @test my_isapprox(bar_ψ2, read_test_data("psi_test"))
+    @test my_isapprox(bar_ψ2, read_test_data("bar_psi_1_2"))
+    @test my_isapprox(fiber.layers[2].outer_bar_ψ, bar_ψ2)
 end
 end
 
@@ -358,9 +388,9 @@ function test4()
     ref_vector = OffsetVector(
         [
             0.000013137314474721333444 + 0.000060922089524345094324im, 
-            0.000026954393863782635663 + 0.000031208370868321103260im, 
+            0.000055595971328228494239 + 0.000064370198816722466457im, 
             -0.022717409856195618784 - 0.008509615513728190084im, 
-            0.020418537947132203020 - 0.002910591998994666637im, 
+            0.112461165037357313512 - 0.016030950306181172837im, 
             0.019326246046475602930 - 0.014437136718637749722im, 
             -2.2301102991334245118 - 0.0093731673949354055im, 
             0.0im, 
@@ -431,33 +461,25 @@ function test5()
     # @test my_isapprox(ref_matrix[:,2], plane_problem.matrix[1:end-4, 2], atol=1e-14)
     # @test my_isapprox(ref_matrix[:,3], plane_problem.matrix[1:end-4, 3], atol=1e-14)
 
-    @test typeof(plane_problem.cohesive.ψ[75]) == ZTerm
-    @test typeof(plane_problem.cohesive.ϕ[75]) == ConstTerm
-    @test plane_problem.cohesive.ϕ[75].num_factor == 0
-    @test typeof(plane_problem.cohesive.Φ[75]) == ConstTerm
-    @test plane_problem.cohesive.Φ[75].num_factor == 0
-
     flag = true
     errors = 0
     for i in axes(ref_matrix, 2)
-        flag = my_isapprox(ref_matrix[:,i], plane_problem.matrix[1:end-4, i], atol=1e-12)
-        if !flag
+        ff = my_isapprox(ref_matrix[1:end-4,i], plane_problem.matrix[1:end-4, i], atol=1e-12)
+        if !ff
             println("Column: ", i)
             errors += 1
         end
-        if errors == 6
-            break
-        end
+        flag = flag && ff
     end
     @test flag
 end
 
 function test()
-    # test1()
-    # test2()
+    test1()
+    test2()
     test3()
-    # test4()
-    # test5()
+    test4()
+    test5()
 end
 
 end # module TestPlaneProblems

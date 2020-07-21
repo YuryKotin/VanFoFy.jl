@@ -1,8 +1,57 @@
 module Testing
 
 using OffsetArrays
-using ..Types: VarLinForm, BoundedVector
+using ..Types: VarLinForm, BoundedVector, ComplexOffsetMatrix
 using ..FunctionalTerms: PolynomialTerm
+
+function my_isapprox(
+    x::VarLinForm{PolynomialTerm}, 
+    y::ComplexOffsetMatrix; 
+    atol::Real=0, 
+    rtol::Real=atol>0 ? 0 : √eps(), 
+)
+    y_axes = axes(y)
+    x_bottom = firstindex(x)
+    y_bottom = first(y_axes[2])
+    if x_bottom != y_bottom
+        println("First var indices don't match: $x_bottom, $y_bottom")
+        return false
+    end
+    
+    x_top = lastindex(x)
+    y_top = last(y_axes[2])
+    if x_top != y_top
+        println("Last var indices don't match: $x_top, $y_top")
+        return false
+    end
+    
+    flag = true
+    for v in eachindex(x)
+        a = firstindex(x[v])
+        b = first(y_axes[1])
+        if a != b
+            println("Bottom powers in var $v don't match: $a, $b")
+            return false
+        end
+        a = lastindex(x[v])
+        b = last(y_axes[1])
+        if a != b
+            println("Top powers in var $v don't match: $a, $b")
+            return false
+        end
+
+        for p in y_axes[1]
+            a = x[v][p]
+            b = y[p,v]
+            if !isapprox(a, b, atol=atol, rtol=rtol)
+                println("Error on variable $v, power $p: $a, $b")
+                flag = false
+            end
+        end
+    end
+    
+    return flag
+end
 
 function my_isapprox(
     x::VarLinForm{T}, 
@@ -24,15 +73,16 @@ function my_isapprox(
         println("Last var indices don't match: $x_top, $y_top")
         return false
     end
-
+    
+    flag = true
     for v in eachindex(x)
         if !my_isapprox(x[v], y[v], atol=atol, rtol=rtol)
             println("Error in test on variable $v")
-            return false
+            flag =  false
         end
     end
     
-    return true
+    return flag
 end
 
 function my_isapprox(

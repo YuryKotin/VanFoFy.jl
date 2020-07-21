@@ -46,7 +46,7 @@ function PlaneProblem(cell::CellData, praecursor::EllipticPraecursor)
         praecursor
     )
 
-    fibers = Vector{PlaneFiber}(undef, size(fibers_data, 1))
+    fibers = Vector{PlaneFiber}(undef, n_fibers)
     index = lastindex(cohesive) + 1
     for f in 1 : n_fibers
         data = fibers_data[f]
@@ -119,8 +119,8 @@ function PlaneProblem(cell::CellData, praecursor::EllipticPraecursor)
         set_bounds!(buffer, -n_terms, n_terms+2)
         
         fiber = fibers[k]
-        
-        for v in eachindex(fiber)
+        f_index = eachindex(fiber)
+        for v in f_index
             row_k = row
 
             for i in 1:2

@@ -106,6 +106,7 @@ end
 Base.firstindex(bv::BoundedVector{T}) where T = bv.bottom
 Base.lastindex(bv::BoundedVector{T}) where T  = bv.top
 Base.eachindex(bv::BoundedVector{T}) where T  = bv.bottom : bv.top
+Base.ndims(bv::BoundedVector{T}) where T = 1
 
 function Base.fill!(bv::BoundedVector{T}, val::T) where T 
     for i in eachindex(bv)
