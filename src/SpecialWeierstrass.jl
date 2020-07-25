@@ -63,6 +63,8 @@ struct Weierstrass #<: EllipticFunction
     g3  ::  ComplexF64
     "Приращение ζ-функции на полупериоде ω1"
     η1  ::  ComplexF64
+    "Приращение ζ-функции на полупериоде ω3"
+    η3  ::  ComplexF64
     "Множитель в формуле для ℘-функции = frac{π θ_3(0) θ_4(0)}{2ω_1})^2"
     ℘_factor  ::  ComplexF64
     "Множитель в формуле для σ-функции"
@@ -154,7 +156,7 @@ struct Weierstrass #<: EllipticFunction
         end
 
         ##########
-        new(l, e1, g2, g3, η1, ℘_factor, σ_factor, θ, cash, 
+        new(l, e1, g2, g3, η1, η3, ℘_factor, σ_factor, θ, cash, 
             ℘_series, derivs_series, max_derivative)
     end
 end

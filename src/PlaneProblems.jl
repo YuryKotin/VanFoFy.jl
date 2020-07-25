@@ -14,7 +14,7 @@ using ..FunctionalTerms: EllipticPraecursor, EllipticalTerm
 using ..FunctionalTerms: WeierstrassTerm, QSpecialTerm, ZTerm, ConstTerm
 using ..FunctionalTerms: differentiate, add_term_series!
 using ..Input: LayerData, InclusionData, CellData
-using ..Types: raw_complex
+using ..Types: raw_complex, FloatOffsetVector, ComplexOffsetVector
 import ..FunctionalTerms: eachpower
 
 using OffsetArrays
@@ -144,6 +144,18 @@ function PlaneProblem(cell::CellData, praecursor::EllipticPraecursor)
         end
 
         row = row_k
+    end
+
+    for v in eachindex(cohesive)
+        row = slae_size - 3
+
+        matrix[row, v] = cohesive.σ22[v]
+        row += 1
+        matrix[row, v] = cohesive.σ23[v]
+        row += 1
+        matrix[row, v] = cohesive.σ33[v]
+        row += 1
+        matrix[row, v] = cohesive.rotation[v]
     end
 
     PlaneProblem(cohesive, fibers, matrix, vector)

@@ -8,8 +8,11 @@ const ComplexOffsetMatrix = OffsetArray{ComplexF64, 2, Array{ComplexF64, 2}}
 # OffsetVector{ComplexF64}
 const ComplexOffsetVector = OffsetArray{ComplexF64, 1, Array{ComplexF64, 1}}
 
+# OffsetVector{Float64}
+const FloatOffsetVector = OffsetArray{Float64, 1, Array{Float64, 1}}
+
 # OffsetVector{Int}
-const IntOffsetVector = OffsetArray{Int, 1, Array{Int, 1}}
+# const IntOffsetVector = OffsetArray{Int, 1, Array{Int, 1}}
 
 ###############################################################################
 
