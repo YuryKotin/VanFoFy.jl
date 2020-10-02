@@ -11,11 +11,11 @@ struct PlaneLayer
     "внешний радиус слоя"
     r_outer ::Float64
     "функции решения в виде линейных форм от нормированных полиномов"
-    ϕ             ::PolynomialSolution
-    inner_z_bar_Φ ::PolynomialSolution
-    inner_bar_ψ   ::PolynomialSolution
-    outer_z_bar_Φ ::PolynomialSolution
-    outer_bar_ψ   ::PolynomialSolution
+    ϕ             ::PolynomialForm
+    inner_z_bar_Φ ::PolynomialForm
+    inner_bar_ψ   ::PolynomialForm
+    outer_z_bar_Φ ::PolynomialForm
+    outer_bar_ψ   ::PolynomialForm
     """
     Конструктор сплошного ядра
     """
@@ -134,6 +134,56 @@ struct PlaneLayer
             E2, ν2, r_inner, r_outer, ϕ2, 
             z_bar_Φ2, bar_ψ2, outer_z_bar_Φ2, outer_bar_ψ2
         )
+    end
+    """
+    """
+    function PlaneLayer(data::LayerData, r_fiber::Float64, ϵ11::Float64) 
+    
+        E = data.E
+        ν = data.ν
+        κ = 3 - 4ν
+        r_outer = data.r
+    
+        if r_outer <= 0 || r_fiber <= 0
+            error("Nonpositive radius")
+        end
+        if r_outer > r_fiber
+            error("Layer is bigger than fiber")
+        end
+
+        ϕ = VarLinForm(
+            OffsetVector(
+                [
+                    PolynomialTerm(1 : 1, r_fiber) for v in 0 : 0
+                ], 
+                0 : 0
+            )
+        )
+        
+        ψ = VarLinForm(
+            OffsetVector(
+                [
+                    PolynomialTerm(-1 : -1, r_fiber) for v in 0 : 0
+                ], 
+                0 : 0
+            )
+        )       
+        
+        ϕ[0][1] = - E * ν / ((κ-1)*(ν+1)) * ϵ11 * r_fiber
+        ψ[0][-1] = 0.0
+    
+        outer_z_bar_Φ = z_conj_diff(ϕ, r_outer)
+        outer_bar_ψ = conjugate(ψ, r_outer)
+    
+        inner_z_bar_Φ = similar(outer_z_bar_Φ)
+        inner_bar_ψ =   similar(outer_bar_ψ)
+    
+    
+        new(
+            E, ν, 0.0, r_outer, ϕ, 
+            inner_z_bar_Φ, inner_bar_ψ, outer_z_bar_Φ, outer_bar_ψ
+        )
+    
     end
 end
 

@@ -299,4 +299,4 @@ end
 
 ###############################################################################
 
-const EllipticalSolution = VarLinForm{EllipticalTerm}
+const EllipticalForm = VarLinForm{EllipticalTerm}

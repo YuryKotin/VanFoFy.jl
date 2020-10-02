@@ -2,10 +2,10 @@ module Testing
 
 using OffsetArrays
 using ..Types: VarLinForm, BoundedVector, ComplexOffsetMatrix
-using ..FunctionalTerms: PolynomialTerm
+using ..FunctionalTerms: PolynomialTerm, PolynomialForm
 
 function my_isapprox(
-    x::VarLinForm{PolynomialTerm}, 
+    x::PolynomialForm, 
     y::ComplexOffsetMatrix; 
     atol::Real=0, 
     rtol::Real=atol>0 ? 0 : √eps(), 

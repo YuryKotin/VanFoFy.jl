@@ -259,14 +259,14 @@ end
 - ``v_m`` - переменные линейной формы
 - ``P_m(z)`` - полином
 "
-const PolynomialSolution = VarLinForm{PolynomialTerm}
+const PolynomialForm = VarLinForm{PolynomialTerm}
 
 """
     z_conj_diff(sol::PolynomialSolution, conj_r::Float64)
 
 Для линейно-полиномиальной формы ϕ(z) вычисляет многочлен z bar ϕ'(z)
 """
-function z_conj_diff(sol::PolynomialSolution, conj_r::Float64)
+function z_conj_diff(sol::PolynomialForm, conj_r::Float64)
     VarLinForm{PolynomialTerm}(
         OffsetVector(
             [
@@ -282,7 +282,7 @@ end
 
 Сопряжение линейно-полиномиальной формы по контуру радиусом conj_r. Возвращает новое решение.
 """
-function conjugate(sol::PolynomialSolution, conj_r::Float64)
+function conjugate(sol::PolynomialForm, conj_r::Float64)
     VarLinForm{PolynomialTerm}(
         OffsetVector(
             [
@@ -298,7 +298,7 @@ end
 
 Пересопряжение линейно-полиномиальной формы по другому контуру
 """
-function reconjugate(sol::PolynomialSolution, old_conj_r::Float64, new_conj_r::Float64)
+function reconjugate(sol::PolynomialForm, old_conj_r::Float64, new_conj_r::Float64)
     VarLinForm{PolynomialTerm}(
         OffsetVector(
             [
@@ -316,18 +316,18 @@ end
 
 Выход за границы массивов не проверяется.
 """
-function add!(dest::PolynomialSolution, source::PolynomialSolution, factor)
+function add!(dest::PolynomialForm, source::PolynomialForm, factor)
     for v in eachindex(source)
         add!(dest[v], source[v], factor)
     end
 end
 
 """
-    similar(source::VarLinForm{PolynomialTerm})
+    similar(source::PolynomialForm)
 
 Создание аналогичной линейно-полиномиальной формы
 """
-function Base.similar(source::VarLinForm{PolynomialTerm})
+function Base.similar(source::PolynomialForm)
     form = VarLinForm{PolynomialTerm}(
         OffsetVector(
             [
@@ -344,4 +344,4 @@ function Base.similar(source::VarLinForm{PolynomialTerm})
     return form
 end
 
-eachpower(sol::PolynomialSolution) = eachindex(first(sol))
+eachpower(sol::PolynomialForm) = eachindex(first(sol))

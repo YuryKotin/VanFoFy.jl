@@ -7,8 +7,8 @@
 module PlaneProblems
 
 using ..Types: VarLinForm, BoundedVector, RationalComplex, set_bounds!
-using ..FunctionalTerms: PolynomialTerm, PolynomialSolution
-using ..FunctionalTerms: EllipticalSolution
+using ..FunctionalTerms: PolynomialTerm, PolynomialForm
+using ..FunctionalTerms: EllipticalForm
 using ..FunctionalTerms: z_conj_diff, conjugate, reconjugate, add!
 using ..FunctionalTerms: EllipticPraecursor, EllipticalTerm
 using ..FunctionalTerms: WeierstrassTerm, QSpecialTerm, ZTerm, ConstTerm

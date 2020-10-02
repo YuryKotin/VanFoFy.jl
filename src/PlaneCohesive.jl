@@ -6,9 +6,9 @@ struct PlaneCohesive
     "прекурсор эллиптических функций"
     praesursor ::EllipticPraecursor
     "функции решения в виде линейных форм эллиптических функций"
-    ϕ ::EllipticalSolution
-    Φ ::EllipticalSolution
-    ψ ::EllipticalSolution
+    ϕ ::EllipticalForm
+    Φ ::EllipticalForm
+    ψ ::EllipticalForm
     "осредненные напряжения"
     σ22 ::FloatOffsetVector
     σ23 ::FloatOffsetVector
@@ -76,7 +76,7 @@ struct PlaneCohesive
             end
         end
     
-        ϕ = EllipticalSolution(ϕ_terms)
+        ϕ = EllipticalForm(ϕ_terms)
     
         Φ_terms = OffsetVector(
             [ differentiate(ϕ_terms[b]) for b in all_inds ],
@@ -117,21 +117,15 @@ struct PlaneCohesive
         ψ_terms[B_var] = ZTerm(0.0+1.0im)
         B_var += 1
 
-        ψ = EllipticalSolution(ψ_terms)
+        ψ = EllipticalForm(ψ_terms)
 
         ω1 = praecursor.l.ω1
         ω3 = praecursor.l.ω3
-        η1 = praecursor.℘.η1
-        η3 = praecursor.℘.η3
-        γ1 = praecursor.Q.γ1
-        γ3 = praecursor.Q.γ3
-        e_i_θ = ω3 / abs(ω3)
-        e_2i_θ = e_i_θ^2
-        cosθ = real(e_i_θ)
-        sinθ = imag(e_i_θ)
+        θ = angle(ω3)
+        cosθ = real(θ)
+        sinθ = imag(θ)
         l2 = 2 * abs(ω1)
         l3 = 2 * abs(ω3)
-        κ = 3 - 4ν
 
         radii = [incl.radius for incl in inclusions]
 
@@ -192,6 +186,46 @@ struct PlaneCohesive
         # σ33 = σ333 l3 Sin[θ];
         @__dot__ σ33 += σ333 * l3 * sinθ
 
+        new(E, ν, praecursor, ϕ, Φ, ψ, σ22, σ23, σ33, rotation)
+    end
+    "Растяжение невзаимодействующих компонентов"
+    function PlaneCohesive(
+        E ::Float64,
+        ν ::Float64,
+        ϵ11 ::Float64,
+        praecursor ::EllipticPraecursor
+    )
+            
+        ϕ_terms = OffsetVector{EllipticalTerm}(undef, 0 : 0)
+        ψ_terms = OffsetVector{EllipticalTerm}(undef, 0 : 0)
+        
+        κ = 3 - 4ν
+        ϕ_terms[0] = ZTerm(-E * ν / ((κ-1)*(1+ν)) * ϵ11)
+        ψ_terms[0]   = ZTerm(0.0im)
+        
+        ϕ = EllipticalForm(ϕ_terms)
+    
+        Φ_terms = OffsetVector(
+            [ differentiate(ϕ_terms[b]) for b in 0 : 0 ],
+            0 : 0
+        )
+        Φ = VarLinForm(Φ_terms)
+
+        ψ = EllipticalForm(ψ_terms)
+
+        ω1 = praecursor.l.ω1
+        ω3 = praecursor.l.ω3
+        θ = angle(ω3)
+        cosθ = real(θ)
+        sinθ = imag(θ)
+        l2 = 2 * abs(ω1)
+        l3 = 2 * abs(ω3)
+
+        rotation = zero_vector(Float64, 0 : 0)
+        σ22 = zero_vector(Float64, 0 : 0)
+        σ23 = zero_vector(Float64, 0 : 0)
+        σ33 = zero_vector(Float64, 0 : 0)
+        
         new(E, ν, praecursor, ϕ, Φ, ψ, σ22, σ23, σ33, rotation)
     end
 end
