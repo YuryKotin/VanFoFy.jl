@@ -4,8 +4,8 @@ module Types
 
 const RationalComplex = Complex{Rational{Int}}
 
-# # OffsetArray{ComplexF64}
-# const ComplexOffsetMatrix = OffsetArray{ComplexF64, 2, Array{ComplexF64, 2}}
+# OffsetArray{ComplexF64}
+const ComplexOffsetMatrix = OffsetArray{ComplexF64, 2, Array{ComplexF64, 2}}
 
 # # OffsetVector{ComplexF64}
 # const ComplexOffsetVector = OffsetArray{ComplexF64, 1, Array{ComplexF64, 1}}
