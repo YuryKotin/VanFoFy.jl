@@ -47,89 +47,25 @@ function PlaneLayer(E, ν, r, r0, first_index, max_power)
     PlaneLayer(E, ν, r, ϕ, χ)    
 end
 
-function displacements_forces(layer::PlaneLayer, buffer::VarPolyFormBox)
-    for i in 1 : 5
-        axes(buffer[i]) == axes(layer.ϕ) || 
-            error("Temp container has wrong shape")
-    end
+function displacements_forces!(layer::PlaneLayer, buffer::VarPolyFormBox)
+    on_circle!(layer.ϕ, layer.r, buffer.f)
+    on_circle_conj!(layer.χ, layer.r, buffer.by)
+    
+    G = layer.E / (2(1+layer.ν))
+    κ = 3 - 4*layer.ν
 
-    E = layer.ϕ
-    ν = layer.ν
-    r = layer.r
-    ϕ = layer.ϕ
-    χ = layer.χ
-    
-    # f = ϕ(z)/. z-> rτ
-    f = buffer[1]
-    @views for p in powers(ϕ)
-        factor = r^p
-        @. f[:,p] = ϕ[:,p] * factor
-    end
-    
-    # zbF = z \bar Φ /.{z -> rτ, \bar z -> r/τ}
-    zbF = buffer[2]
-    @views for p in powers(ϕ)
-        factor = p * r^p
-        @. zbF[:,2-p] = conj(ϕ[:,p]) * factor
-    end
-    
-    # by = \bar χ(z)/. \bar z -> r/τ
-    bc = buffer[3]
-    @views for p in powers(χ)
-        factor = r^p
-        @. bc[:,-p] = χ[:,p] * factor
-    end
-
-    G = E / (2(1+ν))
-    κ = 3 - 4ν
-
-    displ = buffer[4]
-    force = buffer[5]
-    @views for p in powers(f)
-        @. displ[:,p] = (κ*f[:,p] - zbF[:,p] - bc[:,p]) / (2G)
-        @. force[:,p] =    f[:,p] + zbF[:,p] + bc[:,p]
-    end
-    
-    return
+    displacements_forces!(G, κ, buffer)
 end
 
 function PlaneLayer(E, ν, r, prev_layer::PlaneLayer, buffer::VarPolyFormBox)
-    displacements_forces(prev_layer, buffer)
-    displ = buffer[4]
-    force = buffer[5]
-    
     G = E / (2(1+ν))
     κ = 3 - 4ν
     r1 = prev_layer.r
     
-    # f = ϕ(z)/. z-> rτ
-    f = buffer[1]
-    @views for p in powers(ϕ)
-        @. f[:,p] = (1 / (1+κ))*(2G*displ[:,p] + force[:,p])
-    end
-    
-    # zbF = z \bar Φ /.{z -> rτ, \bar z -> r/τ}
-    zbF = buffer[2]
-    @views for p in powers(ϕ)
-        @. zbF[:,2-p] = conj(f[:,p]) * p
-    end
-    
-    # by = \bar χ(z)/. \bar z -> r/τ
-    bc = buffer[3]
-    @views for p in powers(ϕ)
-        @. bc[:,p] = force[:,p] - f[:,p] - zbF[:,p]
-    end
-        
-    ϕ = similar(prev_layer.ϕ)
-    χ = similar(prev_layer.χ)
-    @views for p in powers(ϕ)
-        factor = r1^p
-        @. ϕ[:,p] = f[:,p] / factor
-    end
-    @views for p in powers(χ)
-        factor = r1^p
-        @. χ[:,p] = bc[:,-p] / factor
-    end
+    displacements_forces!(prev_layer, buffer)
+    plane_coupling!(G, κ, buffer)
+    ϕ = from_circle(buffer.f, r1)
+    χ = from_circle_conj(buffer.by, r1)
 
     PlaneLayer(E, ν, r, ϕ, χ)    
 end
@@ -151,7 +87,7 @@ function PlaneFiber(data::FiberData, first_index, max_power)
         ld.E, ld.ν, ld.r,
         r0, first_index, max_power)
     
-    buffer = [similar(layers[1].ϕ) for _ in 1:5]
+    buffer = VarPolyFormBox(layers[1].ϕ)
     
     if n_layers > 1
         for n in 2 : n_layers
@@ -160,7 +96,7 @@ function PlaneFiber(data::FiberData, first_index, max_power)
         end
     end
 
-    displacements_forces(layers[end], buffer)
+    displacements_forces!(layers[end], buffer)
 
     PlaneFiber(layers, r0, buffer)
 end

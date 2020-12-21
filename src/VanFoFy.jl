@@ -2,8 +2,6 @@ module VanFoFy
 
 include("all_modules.jl")
 
-using ..Input: CellData
-
 struct VanFoFyProblem
     doubly_periodic_functions :: DoublyPeriodicFunction
     longitudinal_shear        :: LongitudinalShear

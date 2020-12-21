@@ -1,20 +1,16 @@
-module Types
-
-# using OffsetArrays
-
 const RationalComplex = Complex{Rational{Int}}
 
 # OffsetArray{ComplexF64}
 const ComplexOffsetMatrix = OffsetArray{ComplexF64, 2, Array{ComplexF64, 2}}
 
-# # OffsetVector{ComplexF64}
-# const ComplexOffsetVector = OffsetArray{ComplexF64, 1, Array{ComplexF64, 1}}
+# OffsetVector{ComplexF64}
+const ComplexOffsetVector = OffsetArray{ComplexF64, 1, Array{ComplexF64, 1}}
 
 # # OffsetVector{Float64}
 # const FloatOffsetVector = OffsetArray{Float64, 1, Array{Float64, 1}}
 
-# # OffsetVector{Int}
-# # const IntOffsetVector = OffsetArray{Int, 1, Array{Int, 1}}
+# OffsetVector{Int}
+const IntOffsetVector = OffsetArray{Int, 1, Array{Int, 1}}
 
 # ###############################################################################
 
@@ -148,5 +144,3 @@ const ComplexOffsetMatrix = OffsetArray{ComplexF64, 2, Array{ComplexF64, 2}}
 
 # "Преобразование рационального комплексного числа в обыкновенное"
 # raw_complex(l::Lattice, rz::RationalComplex) = 2*real(rz)*l.ω1 + 2*imag(rz)*l.ω3
-
-# end # module TypeSynonims

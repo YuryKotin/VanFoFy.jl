@@ -1,6 +1,11 @@
+using Lazy: @forward
+using OffsetArrays
+using SpecialFunctions: logfactorial
+
 include("Input.jl")
 include("Types.jl")
 include("VarPolyForm.jl")
+include("VarDoublyPeriodicForms.jl")
 # include("Design.jl")
 # include("General.jl")
 # include("SpecialTheta.jl")

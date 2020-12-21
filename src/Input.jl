@@ -1,7 +1,3 @@
-module Input
-
-using ..Types: RationalComplex
-
 struct LayerData
     E ::Float64 # модуль Юнга
     ν ::Float64 # коэффициент Пуассона
@@ -63,5 +59,3 @@ function check(cd::CellData)
     check.(cd.inclusions)
     check(cd.cohesive)
 end
-
-end # module Input
