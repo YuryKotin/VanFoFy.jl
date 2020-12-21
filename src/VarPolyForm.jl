@@ -7,6 +7,8 @@ struct VarPolyForm
     data ::ComplexOffsetMatrix
 end
 
+const VarPolyFormBox = Vector{VarPolyForm}
+
 function VarPolyForm(var_range, pow_range)
     data = OffsetArray{ComplexF64, 2}(undef, var_range, pow_range)
     fill!(data, 0.0im)

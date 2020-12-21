@@ -1,8 +1,8 @@
 module PlaneProblems
 
 using ..Types: RationalComplex
-using ..VarPolyForms: VarPolyForm
-using ..Input: FiberData, LayerData
+using ..VarPolyForms: VarPolyForm, VarPolyFormBox
+using ..Input: FiberData, LayerData, InclusionData
 
 include("PlaneFiber.jl")
 include("PlaneCohesive.jl")
