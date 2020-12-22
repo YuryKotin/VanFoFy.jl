@@ -5,7 +5,7 @@ end
 #-----------------------------------------------------------------------------#
 
 function VarPolyForm(var_range, pow_range)
-    data = OffsetArray{ComplexF64, 2}(undef, var_range, pow_range)
+    data = OffsetArray{ComplexF64, 2}(undef, pow_range, var_range)
     fill!(data, 0.0im)
     VarPolyForm(data)
 end
@@ -20,8 +20,8 @@ Base.similar(form::VarPolyForm) = VarPolyForm(similar(form.data))
 
 #-----------------------------------------------------------------------------#
 
-variables(form::VarPolyForm) = axes(form.data, 1)
-powers(form::VarPolyForm) =    axes(form.data, 2)
+powers(form::VarPolyForm) =    axes(form.data, 1)
+variables(form::VarPolyForm) = axes(form.data, 2)
 
 #=============================================================================#
 
@@ -52,28 +52,40 @@ end
 #=============================================================================#
 
 function on_circle!(input::VarPolyForm, r::Float64, output::VarPolyForm)
-    axes(input) == axes(output) || error("In and out containers have different shapes")
-    @views for p in powers(input)
-        factor = r^p
-        @. output[:,p] = input[:,p] * factor
+    axes(input) == axes(output) || 
+        error("In and out containers have different shapes")
+    
+    pows = powers(input)
+    vars = variables(input)
+    rp = r^first(pows)
+    for v in vars
+        factor = rp
+        for p in pows
+            output[v,p] = input[v,p] * factor
+            factor *= r
+        end
     end
 end
 
 #-----------------------------------------------------------------------------#
 
 function on_circle_conj!(input::VarPolyForm, r::Float64, output::VarPolyForm)
-    variables(input) == variables(output) || error("In and out containers have different variables")
+    variables(input) == variables(output) || 
+        error("In and out containers have different variables")
+    first(powers(input)) == -last(powers(output))  || 
+        error("In and out containers have different powers")
+    last(powers(input))  == -first(powers(output)) || 
+        error("In and out containers have different powers")
     
-    first_pow_in  = first(powers(input))
-    last_pow_in   = last( powers(input))
-    first_pow_out = first(powers(output))
-    last_pow_out  = last( powers(output))
-    first_pow_in == -last_pow_out  || error("In and out containers have different powers")
-    last_pow_in  == -first_pow_out || error("In and out containers have different powers")
-    
-    @views for p in powers(input)
-        factor = r^p
-        @. output[:,-p] = conj(input[:,p]) * factor
+    pows = powers(input)
+    vars = variables(input)
+    rp = r^first(pows)
+    for v in vars
+        factor = rp
+        for p in pows
+            output[v,-p] = conj(input[v,p]) * factor
+            factor *= r
+        end
     end
 end
 
@@ -81,10 +93,18 @@ end
 
 function from_circle(input::VarPolyForm, r::Float64)
     output = similar(input)
-    @views for p in powers(input)
-        factor = r^p
-        @. output[:,p] = input[:,p] / factor
+
+    pows = powers(input)
+    vars = variables(input)
+    rp = r^first(pows)
+    for v in vars
+        factor = rp
+        for p in pows
+            output[v,p] = input[v,p] / factor
+            factor *= r
+        end
     end
+
     return output
 end
 
@@ -94,9 +114,16 @@ function from_circle_conj(input::VarPolyForm, r::Float64)
     conj_powers = -last( powers(input)): -first(powers(input))
     output = VarPolyForm(variables(input), conj_powers)
 
-    @views for p in powers(input)
-        factor = r^p
-        @. output[:,-p] = conj(input[:,p]) / factor
+    pows = powers(input)
+    vars = variables(input)
+    rp = r^first(pows)
+    for v in vars
+        factor = rp
+        for p in pows
+            output[v,-p] = conj(input[v,p]) / factor
+            factor *= r
+        end
     end
+
     return output
 end
