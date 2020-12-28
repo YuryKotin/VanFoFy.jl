@@ -3,9 +3,59 @@ struct PlaneLayer
     ν ::Float64
     r ::Float64
     # polynomial form of solution
-    ϕ ::VarPolyForm
-    χ ::VarPolyForm
+    ϕ ::PolynomForm
+    χ ::PolynomForm
 end
+
+struct PlaneLayer1{C <: Contour}
+    E ::Float64
+    ν ::Float64
+    contour ::C
+    # polynomial form of solution
+    ϕ ::PolynomForm
+    χ ::PolynomForm
+end
+
+function PlaneLayer1(outer<:Contour, E, ν, first_index, max_power)
+    pow_range_ϕ = -max_power     : max_power + 2
+    pow_range_χ = -max_power - 2 : max_power
+    
+    ar = OffsetVector{Int}(undef, 0:max_power+2)
+    br = OffsetVector{Int}(undef, 0:max_power)
+    ai = similar(ar)
+    bi = similar(br)
+
+    ind = first_index
+    for i in axes(ar,1)
+        ar[i] = ind; ind += 1
+        ai[i] = ind; ind += 1
+    end
+    for i in axes(br,1)
+        br[i] = ind; ind += 1
+        bi[i] = ind; ind += 1
+    end 
+    
+    var_range = first(ar) : last(bi)
+    
+    ϕ = PolynomForm(var_range, pow_range_ϕ)
+    χ = PolynomForm(var_range, pow_range_χ)
+    
+    for i in axes(ar,1)
+        ϕ[ar[i],i] = 1.0 + 0.0im
+        ϕ[ai[i],i] = 0.0 + 1.0im
+    end
+    for i in axes(br,1)
+        χ[br[i],i] = 1.0 + 0.0im
+        χ[bi[i],i] = 0.0 + 1.0im
+    end
+    
+    if r0 > 0
+        # TODO Hollow layer
+    end
+
+    PlaneLayer(E, ν, r, ϕ, χ)    
+end
+
 
 function PlaneLayer(E, ν, r, r0, first_index, max_power)
     pow_range_ϕ = -max_power     : max_power + 2
@@ -28,8 +78,8 @@ function PlaneLayer(E, ν, r, r0, first_index, max_power)
     
     var_range = first(ar) : last(bi)
     
-    ϕ = VarPolyForm(var_range, pow_range_ϕ)
-    χ = VarPolyForm(var_range, pow_range_χ)
+    ϕ = PolynomForm(var_range, pow_range_ϕ)
+    χ = PolynomForm(var_range, pow_range_χ)
     
     for i in axes(ar,1)
         ϕ[ar[i],i] = 1.0 + 0.0im
@@ -48,7 +98,7 @@ function PlaneLayer(E, ν, r, r0, first_index, max_power)
 end
 
 function displacements_forces!(layer::PlaneLayer, buffer::VarPolyFormBox)
-    on_circle!(layer.ϕ, layer.r, buffer.f)
+    series_on_circle(layer.ϕ, layer.r, buffer.f)
     on_circle_conj!(layer.χ, layer.r, buffer.by)
     
     G = layer.E / (2(1+layer.ν))

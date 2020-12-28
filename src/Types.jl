@@ -12,6 +12,23 @@ const ComplexOffsetVector = OffsetArray{ComplexF64, 1, Array{ComplexF64, 1}}
 # OffsetVector{Int}
 const IntOffsetVector = OffsetArray{Int, 1, Array{Int, 1}}
 
+###############################################################################
+
+abstract type Problem end
+
+abstract type Shear     <: Problem end
+abstract type Plane     <: Problem end
+abstract type Extension <: Problem end
+
+#------------------------------------------------------------------------------
+
+abstract type Contour end
+
+struct Circular <: Contour 
+    r ::Float64
+    ξ ::RationalComplex
+end
+
 # ###############################################################################
 
 # function differentiate!(series::ComplexOffsetVector)

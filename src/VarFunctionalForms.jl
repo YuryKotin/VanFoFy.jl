@@ -1,60 +1,60 @@
 
-abstract type VarFunctionForm end
+abstract type FunctionForm end
 
-abstract type VarDoublyPeriodicForm <: VarFunctionForm end
+abstract type PeriodicForm <: FunctionForm end
 
-struct VarZForm <: VarFunctionForm
+struct ZForm <: FunctionForm
     coeffs ::ComplexOffsetVector
 end
 
-struct VarWeierstrassForm <: VarDoublyPeriodicForm
+struct WeierstrassForm <: PeriodicForm
     coeffs ::ComplexOffsetVector
     derivs ::IntOffsetVector
     pole   ::RationalComplex
     r      ::Float64
 end
 
-struct VarQSpecialForm <: VarDoublyPeriodicForm
+struct QSpecialForm <: PeriodicForm
     coeffs ::ComplexOffsetVector
     derivs ::IntOffsetVector
     pole   ::RationalComplex
 end
-#-----------------------------------------------------------------------------#
+
 #=============================================================================#
 
-function VarZForm(var_range::UnitRange)
+function ZForm(var_range::UnitRange)
     coeffs = OffsetVector{ComplexF64}(undef, var_range)
     fill!(coeffs, 0.0im)
-    VarZForm(coeffs)
+    ZForm(coeffs)
 end
 
-function VarWeierstrassForm(var_range, pole, r)
+function WeierstrassForm(var_range, pole, r)
     coeffs = OffsetVector{ComplexF64}(undef, var_range)
     derivs = OffsetVector{ComplexF64}(undef, var_range)
     fill!(coeffs, 0.0im)
     fill!(derivs, 0)
     
-    VarWeierstrassForm(coeffs, derivs, pole, r)
+    WeierstrassForm(coeffs, derivs, pole, r)
 end
 
-function VarQSpecialForm(var_range, pole)
+function QSpecialForm(var_range, pole)
     coeffs = OffsetVector{ComplexF64}(undef, var_range)
     derivs = OffsetVector{ComplexF64}(undef, var_range)
     fill!(coeffs, 0.0im)
     fill!(derivs, 0)
     
-    VarQSpecialForm(coeffs, derivs, pole)
+    QSpecialForm(coeffs, derivs, pole)
 end
 
 #=============================================================================#
 
-@forward VarZForm.coeffs           axes, getindex, setindex!
-@forward VarWeierstrassForm.coeffs axes, getindex, setindex!
-@forward VarQSpecialForm.coeffs    axes, getindex, setindex!
+@forward ZForm.coeffs           axes, getindex, setindex!
+@forward WeierstrassForm.coeffs axes, getindex, setindex!
+@forward QSpecialForm.coeffs    axes, getindex, setindex!
 
 #-----------------------------------------------------------------------------#
 
-variables(form<:VarFunctionForm) = UnitRange(axes(form, 1))
+variables(form<:FunctionForm) = UnitRange(axes(form, 1))
 
 #=============================================================================#
 
@@ -62,8 +62,8 @@ conjQ(z, Q) = Q ? conj(z) : z
 
 #=============================================================================#
 
-function on_circle!(input::VarZForm, pole::RationalComplex, r::Float64, 
-                    output::VarPolyForm, instance::PeriodicInstance,
+function series_on_circle!(input::ZForm, pole::RationalComplex, r::Float64, 
+                    output::PolynomForm, instance::PeriodicInstance,
                     is_conj::Bool=false)
     #---------------------------------------------------
     ps = is_conj ? -1 : 1
@@ -76,16 +76,15 @@ function on_circle!(input::VarZForm, pole::RationalComplex, r::Float64,
     end
 end
 
-#-----------------------------------------------------------------------------#
 #=============================================================================#
 
-function taylor(periodic<:VarDoublyPeriodicForm, Δ, instance) end
+function taylor(periodic<:PeriodicForm, Δ, instance) end
 
 #=============================================================================#
 
-function on_circle_pos_pow!(input<:VarDoublyPeriodicForm,
+function series_on_circle_pos!(input<:PeriodicForm,
                             pole::RationalComplex, r::Float64, 
-                            output::VarPolyForm, instance::PeriodicInstance,
+                            output::PolynomForm, instance::PeriodicInstance,
                             is_conj::Bool=false)
     #------------------------------------------------------
     ps = is_conj ? -1 : 1
@@ -99,56 +98,49 @@ function on_circle_pos_pow!(input<:VarDoublyPeriodicForm,
             
             rn = r^(n+2)
             for m in 0 : M
-                output[ps * m, v] = conjQ(
-                    input.coeffs[v] * rn * 
-                    rho[m,n],
-                    is_conj)
+                val = input[v] * rn * rho[n,m]
+                output[ps * m, v] = conjQ(val, is_conj)
                 rn *= r
             end
         end
     else # Δ ≠ 0
         absΔ = abs(raw_complex(Δ, input.mother))
-        for v in variables
+        for v in variables(input)
             n = input.derivs[v]
             Rn = (input.r / absΔ)^(n+2)
             rΔ = r / absΔ
             rm = 1.0
             for m in 0 : M
-                output[ps * m, v] = conjQ(
-                    input.coeffs[v] * Rn * rm * 
-                    rho[m,n],
-                    is_conj)
+                val = input[v] * Rn * rm * rho[n,m]
+                output[ps * m, v] = conjQ(val, is_conj)
                 rm *= rΔ
             end
         end
     end
 end
 
-function on_circle!(input::VarWeierstrassForm, pole::RationalComplex, r::Float64, 
-                    output::VarPolyForm, instance::PeriodicInstance; is_conj::Bool=false)
+function series_on_circle!(input::WeierstrassForm, pole::RationalComplex, r::Float64, 
+                    output::PolynomForm, special::PeriodicInstance; is_conj::Bool=false)
     #------------------------------------------------------
-    on_circle_pos_pow!(input, pole, r, output, instance, is_conj)
+    series_on_circle_pos!(input, pole, r, output, special, is_conj)
     
     ps = is_conj ? -1 : 1
     
-    Δ = pole - input.pole
-    if Δ == 0
+    if pole == input.pole
         for v in variables(input)
             n = input.derivs[v]
-            
-            output[ps * (-n-2), v] = conjQ(
-                input.coeffs[v] * (-1)^(n % 2), 
-                is_conj)
+            val = input[v] * (-1)^(n % 2)
+            output[ps * (-n-2), v] = conjQ(val, is_conj)
         end
     end
 end
 
 #-----------------------------------------------------------------------------#
 
-function on_circle!(input::VarQSpecialForm; 
+function series_on_circle!(input::QSpecialForm,
                     pole::RationalComplex, r::Float64, 
-                    output::VarPolyForm, instance::PeriodicInstance,
+                    output::PolynomForm, special::PeriodicInstance,
                     is_conj::Bool=false)
     #------------------------------------------------------
-    on_circle_pos_pow!(input, pole, r, output, instance, is_conj)
+    series_on_circle_pos!(input, pole, r, output, special, is_conj)
 end

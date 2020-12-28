@@ -1,46 +1,46 @@
-struct VarPolyForm
-    data ::ComplexOffsetMatrix
+struct PolynomForm
+    coeffs ::ComplexOffsetMatrix
 end
 
 #-----------------------------------------------------------------------------#
 
-function VarPolyForm(var_range, pow_range)
+function PolynomForm(var_range, pow_range)
     data = OffsetArray{ComplexF64, 2}(undef, pow_range, var_range)
     fill!(data, 0.0im)
-    VarPolyForm(data)
+    PolynomForm(data)
 end
 
 #-----------------------------------------------------------------------------#
 
-@forward VarPolyForm.data getindex, setindex!, fill!, axes
+@forward PolynomForm.coeffs getindex, setindex!, fill!, axes
 
 #-----------------------------------------------------------------------------#
 
-Base.similar(form::VarPolyForm) = VarPolyForm(similar(form.data))
+Base.similar(form::PolynomForm) = PolynomForm(similar(form.coeffs))
 
 #-----------------------------------------------------------------------------#
 
-powers(form::VarPolyForm) =    axes(form.data, 1)
-variables(form::VarPolyForm) = axes(form.data, 2)
+powers(form::PolynomForm) =    axes(form.coeffs, 1)
+variables(form::PolynomForm) = axes(form.coeffs, 2)
 
 #=============================================================================#
 
 struct VarPolyFormBox
     # f = ϕ(z)/. z-> rτ
-    f ::VarPolyForm 
+    f ::PolynomForm 
     # zbF = z \bar Φ /.{z -> rτ, \bar z -> r/τ}
-    zbF ::VarPolyForm 
+    zbF ::PolynomForm 
     # by = \bar ψ(z)/. \bar z -> r/τ
-    by ::VarPolyForm 
+    by ::PolynomForm 
     # displ = (κ f - zbF - by)/(2G)
-    displ ::VarPolyForm
+    displ ::PolynomForm
     # force = f + zbF + by
-    force ::VarPolyForm
+    force ::PolynomForm
 end
 
 #-----------------------------------------------------------------------------#
 
-function VarPolyFormBox(form::VarPolyForm)
+function VarPolyFormBox(form::PolynomForm)
     f = similar(form)
     zbF = similar(form)
     by = similar(form)
@@ -51,9 +51,22 @@ end
 
 #=============================================================================#
 
-function on_circle!(input::VarPolyForm, r::Float64, output::VarPolyForm)
-    axes(input) == axes(output) || 
-        error("In and out containers have different shapes")
+conjQ(z, Q) = Q ? conj(z) : z
+
+#=============================================================================#
+
+function series_on_circle!(input::PolynomForm, r::Float64, output::PolynomForm, is_conj::Bool=false)
+    variables(input) == variables(output) || 
+        error("In and out containers have different variables")
+    if is_conj
+        powers(input) == conj_range(powers(output))  || 
+            error("In and out containers have different powers")
+    else
+        powers(input) == powers(output)  || 
+            error("In and out containers have different powers")
+    end    
+    
+    ps = is_conj ? -1 : 1
     
     pows = powers(input)
     vars = variables(input)
@@ -61,7 +74,8 @@ function on_circle!(input::VarPolyForm, r::Float64, output::VarPolyForm)
     for v in vars
         factor = rp
         for p in pows
-            output[v,p] = input[v,p] * factor
+            val = input[v,p] * factor
+            output[ps * p, v] = conjQ(val, is_conj)
             factor *= r
         end
     end
@@ -69,7 +83,7 @@ end
 
 #-----------------------------------------------------------------------------#
 
-function on_circle_conj!(input::VarPolyForm, r::Float64, output::VarPolyForm)
+function on_circle_conj!(input::PolynomForm, r::Float64, output::PolynomForm)
     variables(input) == variables(output) || 
         error("In and out containers have different variables")
     first(powers(input)) == -last(powers(output))  || 
@@ -91,7 +105,7 @@ end
 
 #-----------------------------------------------------------------------------#
 
-function from_circle(input::VarPolyForm, r::Float64)
+function from_circle(input::PolynomForm, r::Float64)
     output = similar(input)
 
     pows = powers(input)
@@ -110,9 +124,9 @@ end
 
 #-----------------------------------------------------------------------------#
 
-function from_circle_conj(input::VarPolyForm, r::Float64)
+function from_circle_conj(input::PolynomForm, r::Float64)
     conj_powers = -last( powers(input)): -first(powers(input))
-    output = VarPolyForm(variables(input), conj_powers)
+    output = PolynomForm(variables(input), conj_powers)
 
     pows = powers(input)
     vars = variables(input)

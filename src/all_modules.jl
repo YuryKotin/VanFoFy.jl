@@ -4,8 +4,9 @@ using SpecialFunctions: logfactorial
 
 include("Input.jl")
 include("Types.jl")
+include("Misc.jl")
 include("VarPolyForm.jl")
-include("VarDoublyPeriodicForms.jl")
+include("VarFunctionalForms.jl")
 # include("Design.jl")
 # include("General.jl")
 # include("SpecialTheta.jl")
